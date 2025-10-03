@@ -31,7 +31,7 @@ test('should render player 2 piece', ()=>{
 
 test('should render active piece', () => {
     const {getByTestId} = renderPiece(1, false, [1,2,3], false, false, 2);
-    expect(getByTestId('piece-outer').style.boxShadow).toContain('rgba(255, 238, 88');
+    expect(getByTestId('piece-outer').style.boxShadow).toContain('rgba(255, 255, 255');
 });
 
 test('should render king piece', () => {
