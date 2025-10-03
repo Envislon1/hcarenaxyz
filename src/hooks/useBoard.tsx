@@ -62,8 +62,9 @@ export const initialState = () => {
     }
 }
 
-const useBoard = (init = initialState()):[GameState, Function, Function] => {
+const useBoard = (init = initialState()):[GameState, Function, Function, Function, boolean] => {
     const [boardState, setBoardState] = useState(init);
+    const [history, setHistory] = useState<GameState[]>([init]);
 
     //handle AI's turn
     const handleAI = (state:GameState) => {
@@ -100,6 +101,7 @@ const useBoard = (init = initialState()):[GameState, Function, Function] => {
         const newState = movePiece(from, to, boardState);
         newState.selectedPiece = null;
         setBoardState(newState);
+        setHistory([...history, newState]);
 
         if(newState.playerTurn === 2) handleAI(newState);
     };
@@ -108,7 +110,18 @@ const useBoard = (init = initialState()):[GameState, Function, Function] => {
         setBoardState({...boardState, selectedPiece: index});
     };
 
-    return [boardState, move, selectPiece];
+    const undoMove = () => {
+        if (history.length > 1) {
+            const newHistory = history.slice(0, -1);
+            const previousState = newHistory[newHistory.length - 1];
+            setHistory(newHistory);
+            setBoardState(previousState);
+        }
+    };
+
+    const canUndo = history.length > 1 && boardState.playerTurn === 1;
+
+    return [boardState, move, selectPiece, undoMove, canUndo];
 }
 
 export default useBoard;
