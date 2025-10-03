@@ -22,8 +22,8 @@ const Piece: React.FC<PieceProps> = ({player, king, canDrag, hasJump, AISelected
 
     //styling
     const gradient = player === 1 
-        ? 'radial-gradient(circle at 35% 35%, #ff5252, #f44336, #e53935)'
-        : 'radial-gradient(circle at 35% 35%, #c0c0c0, #a8a8a8, #909090)';
+        ? 'radial-gradient(circle at 30% 30%, #ff6b6b, #f44336, #d32f2f, #b71c1c)'
+        : 'radial-gradient(circle at 30% 30%, #d4d4d4, #a8a8a8, #7a7a7a, #5e5e5e)';
     
     const iconSize = `${size/21}px`
     
@@ -35,7 +35,7 @@ const Piece: React.FC<PieceProps> = ({player, king, canDrag, hasJump, AISelected
         height: '80%',
         borderRadius: '50%',
         background: gradient,
-        boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.8), inset 0 6px 18px rgba(255, 255, 255, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3)'
+        boxShadow: 'inset 0 -15px 35px rgba(0, 0, 0, 0.9), inset 0 8px 25px rgba(255, 255, 255, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3)'
     }
 
     const innerStyle: React.CSSProperties = {
@@ -53,7 +53,7 @@ const Piece: React.FC<PieceProps> = ({player, king, canDrag, hasJump, AISelected
     }
 
     const highlight = (canDrag.length > 0 && player === 1) || AISelected || isSelected;
-    if(highlight) outerStyle = {...outerStyle, boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.8), inset 0 6px 18px rgba(255, 255, 255, 0.5), 0 0 15px 3px rgba(255, 255, 255, 0.8)'}
+    if(highlight) outerStyle = {...outerStyle, boxShadow: 'inset 0 -15px 35px rgba(0, 0, 0, 0.9), inset 0 8px 25px rgba(255, 255, 255, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.4), 0 0 15px 3px rgba(255, 255, 255, 0.8)'}
 
     // Handle piece click
     const handlePieceClick = (e: React.MouseEvent) => {

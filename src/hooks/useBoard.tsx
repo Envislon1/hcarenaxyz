@@ -62,7 +62,7 @@ export const initialState = () => {
     }
 }
 
-const useBoard = (init = initialState()):[GameState, Function, Function, Function, boolean] => {
+const useBoard = (init = initialState()):[GameState, Function, Function, Function, boolean, Function] => {
     const [boardState, setBoardState] = useState(init);
     const [history, setHistory] = useState<GameState[]>([init]);
 
@@ -119,9 +119,15 @@ const useBoard = (init = initialState()):[GameState, Function, Function, Functio
         }
     };
 
-    const canUndo = history.length > 1 && boardState.playerTurn === 1;
+    const restartGame = () => {
+        const newState = initialState();
+        setHistory([newState]);
+        setBoardState(newState);
+    };
 
-    return [boardState, move, selectPiece, undoMove, canUndo];
+    const canUndo = history.length > 1;
+
+    return [boardState, move, selectPiece, undoMove, canUndo, restartGame];
 }
 
 export default useBoard;
