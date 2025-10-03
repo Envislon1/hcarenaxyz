@@ -46,7 +46,7 @@ const Tile: React.FC<TileProps> = ({index, black, piece, AIMoveTo, move, size, s
     };
 
     //styling
-    const tileColor = black ? 'rgb(117, 117, 117)' : 'rgb(238, 238, 238)';
+    const tileColor = black ? '#000000' : '#ffffff';
     const highlightColor = '#5c6bc0';
     const isLegalMove = canDrop || AIMoveTo || isSelectedLegal;
     const statusColor = isLegalMove ? highlightColor : tileColor;

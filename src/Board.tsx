@@ -4,7 +4,9 @@ import useBoard from './hooks/useBoard';
 
 const boardStyle : React.CSSProperties = {
     display: 'flex',
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    border: '8px solid #000000',
+    boxSizing: 'border-box'
 }
 
 const Board: React.FC = () => {

@@ -20,10 +20,10 @@ const renderTile = (index:number, black:boolean, piece: null | PieceClass) => {
 
 test('should render black tile', ()=>{
     const {getByTestId} = renderTile(0, true, null);
-    expect(getByTestId('tile').style.backgroundColor).toBe('rgb(117, 117, 117)');
+    expect(getByTestId('tile').style.backgroundColor).toBe('#000000');
 });
 
 test('should render white tile', ()=>{
     const {getByTestId} = renderTile(0, false, null);
-    expect(getByTestId('tile').style.backgroundColor).toBe('rgb(238, 238, 238)');
+    expect(getByTestId('tile').style.backgroundColor).toBe('#ffffff');
 });
