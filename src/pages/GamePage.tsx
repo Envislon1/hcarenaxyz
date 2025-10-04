@@ -328,8 +328,9 @@ const GamePage = () => {
   const currentPlayerTime = (moveCount % 2 === 0) ? player1Time : player2Time;
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+    <div className="w-full h-screen overflow-hidden">
+      {/* Desktop Layout - Sidebar */}
+      <div className="hidden lg:grid lg:grid-cols-4 gap-4 max-w-7xl mx-auto px-4 h-full items-center">
         {/* Sidebar - Player Info */}
         <div className="lg:col-span-1 space-y-4">
           <Card className="p-4 bg-chess-dark/90 border-chess-brown">
@@ -369,10 +370,10 @@ const GamePage = () => {
           </Card>
         </div>
 
-        {/* Game Board - 3/4 of screen */}
+        {/* Game Board - Desktop */}
         <div className="lg:col-span-3">
-          <div className="w-full max-w-3xl mx-auto px-0 md:px-4">
-            <div className="aspect-square w-full grid grid-cols-8 grid-rows-8 border-2 md:border-4 border-chess-brown rounded-lg overflow-hidden shadow-2xl">
+          <div className="w-full max-w-3xl mx-auto px-4">
+            <div className="aspect-square w-full grid grid-cols-8 grid-rows-8 border-4 border-chess-brown rounded-lg overflow-hidden shadow-2xl">
               {boardState.map((piece, index) => {
                 const row = Math.floor(index / 8);
                 const col = index % 8;
@@ -380,7 +381,6 @@ const GamePage = () => {
                 const isSelected = selectedSquare === index;
                 const notation = indexToNotation(index);
 
-                // Render checkers piece
                 const renderPiece = () => {
                   if (!piece || !piece.player) return null;
                   
@@ -421,9 +421,7 @@ const GamePage = () => {
                     `}
                   >
                     {renderPiece()}
-                    
-                    {/* Square notation */}
-                    <div className="absolute bottom-0.5 right-0.5 text-[8px] md:text-xs opacity-50 font-mono">
+                    <div className="absolute bottom-0.5 right-0.5 text-xs opacity-50 font-mono">
                       {notation}
                     </div>
                   </div>
@@ -442,6 +440,117 @@ const GamePage = () => {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile/Tablet Layout - Full width board with positioned info */}
+      <div className="lg:hidden flex flex-col h-full bg-background">
+        {/* Top Player Info */}
+        <div className="flex justify-between items-center px-4 py-3 bg-chess-dark/50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-chess-accent/20 flex items-center justify-center">
+              <User className="w-5 h-5 text-chess-accent" />
+            </div>
+            <div>
+              <div className="text-white font-semibold text-sm">Player 1</div>
+              <div className="text-xs text-muted-foreground">
+                <Trophy className="w-3 h-3 inline mr-1" />
+                {game.stake_amount} HC̸
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-mono text-white">
+              {Math.floor(player1Time / 60)}:{(player1Time % 60).toString().padStart(2, '0')}
+            </div>
+          </div>
+        </div>
+
+        {/* Game Board - Full Width */}
+        <div className="flex-1 flex items-center justify-center px-0">
+          <div className="w-full aspect-square grid grid-cols-8 grid-rows-8 border-2 border-chess-brown">
+            {boardState.map((piece, index) => {
+              const row = Math.floor(index / 8);
+              const col = index % 8;
+              const isLight = (row + col) % 2 === 0;
+              const isSelected = selectedSquare === index;
+              const notation = indexToNotation(index);
+
+              const renderPiece = () => {
+                if (!piece || !piece.player) return null;
+                
+                const colors = piece.player === 1 
+                  ? { outer: 'rgb(183, 28, 28)', inner: 'rgb(229, 57, 53)' }
+                  : { outer: 'rgb(33, 33, 33)', inner: 'rgb(66, 66, 66)' };
+                
+                return (
+                  <div 
+                    className="w-[70%] h-[70%] rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: colors.outer,
+                      boxShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    <div 
+                      className="w-[85%] h-[85%] rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: colors.inner }}
+                    >
+                      {piece.king && <span className="text-sm">👑</span>}
+                    </div>
+                  </div>
+                );
+              };
+
+              const isHighlighted = highlightedMoves.includes(index);
+
+              return (
+                <div
+                  key={index}
+                  onClick={() => handleSquareClick(index)}
+                  className={`
+                    relative flex items-center justify-center cursor-pointer transition-all
+                    ${isLight ? 'bg-chess-light' : 'bg-chess-brown'}
+                    ${isSelected ? 'ring-2 ring-chess-accent' : ''}
+                    ${isHighlighted ? 'ring-2 ring-yellow-400' : ''}
+                    active:opacity-80
+                  `}
+                >
+                  {renderPiece()}
+                  <div className="absolute bottom-0 right-0.5 text-[8px] opacity-50 font-mono">
+                    {notation}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Bottom Player Info */}
+        <div className="flex justify-between items-center px-4 py-3 bg-chess-dark/50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-chess-accent/20 flex items-center justify-center">
+              <User className="w-5 h-5 text-chess-accent" />
+            </div>
+            <div>
+              <div className="text-white font-semibold text-sm">
+                {game.player2_id ? 'Player 2' : 'Waiting...'}
+              </div>
+              {game.status === 'active' && (
+                <div className="text-xs text-chess-accent">
+                  {(isPlayer1 && moveCount % 2 === 0) || (isPlayer2 && moveCount % 2 === 1)
+                    ? "Your turn"
+                    : "Opponent's turn"}
+                </div>
+              )}
+            </div>
+          </div>
+          {game.player2_id && (
+            <div className="text-right">
+              <div className="text-2xl font-mono text-white">
+                {Math.floor(player2Time / 60)}:{(player2Time % 60).toString().padStart(2, '0')}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
