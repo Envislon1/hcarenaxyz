@@ -171,7 +171,7 @@ const CreateMatchPage = () => {
             </Select>
             {gameType === "checkers" && (
               <p className="text-xs text-muted-foreground">
-                Required balance: {requiredBalance} holocoins (includes 5% HC̸ fee)
+                Required balance: {requiredBalance.toFixed(1)} holocoins (includes 5% HC̸ fee)
               </p>
             )}
           </div>
@@ -195,11 +195,11 @@ const CreateMatchPage = () => {
           <div className="p-4 bg-chess-brown/20 rounded-lg space-y-2">
             <div className="flex justify-between text-sm">
               <span>Your balance:</span>
-              <span className="text-chess-accent font-bold">{user.balance} holocoins</span>
+              <span className="text-chess-accent font-bold">{user.balance.toFixed(1)} holocoins</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Required:</span>
-              <span className="font-bold">{requiredBalance} holocoins</span>
+              <span className="font-bold">{requiredBalance.toFixed(1)} holocoins</span>
             </div>
             <div className="text-xs text-muted-foreground pt-2 border-t border-chess-brown/30">
               1 Holocoin = ₦612 Nigerian Naira
