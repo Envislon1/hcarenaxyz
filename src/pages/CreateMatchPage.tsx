@@ -195,11 +195,11 @@ const CreateMatchPage = () => {
           <div className="p-4 bg-chess-brown/20 rounded-lg space-y-2">
             <div className="flex justify-between text-sm">
               <span>Your balance:</span>
-              <span className="text-chess-accent font-bold">{user.balance.toFixed(1)} holocoins</span>
+              <span className="text-chess-accent font-bold">HC̸{user.balance.toFixed(1)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Required:</span>
-              <span className="font-bold">{requiredBalance.toFixed(1)} holocoins</span>
+              <span className="font-bold">HC̸{requiredBalance.toFixed(1)}</span>
             </div>
             <div className="text-xs text-muted-foreground pt-2 border-t border-chess-brown/30">
               1 Holocoin = ₦612 Nigerian Naira
