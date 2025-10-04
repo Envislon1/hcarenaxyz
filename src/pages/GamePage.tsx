@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { gameService, indexToNotation } from "@/services/gameService";
+import { userService } from "@/services/userService";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
@@ -42,17 +43,28 @@ const GamePage = () => {
   const [player2Time, setPlayer2Time] = useState(300);
   const [legalMoves, setLegalMoves] = useState<Map<number, number[]>>(new Map());
   const [highlightedMoves, setHighlightedMoves] = useState<number[]>([]);
+  const [player1Username, setPlayer1Username] = useState<string>('');
+  const [player2Username, setPlayer2Username] = useState<string>('');
 
   useEffect(() => {
     if (!gameId) return;
 
     // Load game
-    gameService.getGame(gameId).then((gameData) => {
+    gameService.getGame(gameId).then(async (gameData) => {
       if (gameData) {
         setGame(gameData);
         setPlayer1Time(gameData.player1_time_remaining);
         setPlayer2Time(gameData.player2_time_remaining);
         setMoveCount(gameData.current_turn - 1);
+        
+        // Fetch player usernames
+        const p1 = await userService.getUserById(gameData.player1_id);
+        if (p1) setPlayer1Username(p1.username);
+        
+        if (gameData.player2_id) {
+          const p2 = await userService.getUserById(gameData.player2_id);
+          if (p2) setPlayer2Username(p2.username);
+        }
         
         // Load board state from database
         if (gameData.board_state && Array.isArray(gameData.board_state)) {
@@ -443,31 +455,28 @@ const GamePage = () => {
         </div>
       </div>
 
-      {/* Mobile/Tablet Layout - Full width board with positioned info */}
-      <div className="lg:hidden flex flex-col h-full bg-background">
-        {/* Top Player Info */}
-        <div className="flex justify-between items-center px-4 py-3 bg-chess-dark/50">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-chess-accent/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-chess-accent" />
-            </div>
-            <div>
-              <div className="text-white font-semibold text-sm">Player 1</div>
-              <div className="text-xs text-muted-foreground">
-                <Trophy className="w-3 h-3 inline mr-1" />
-                {game.stake_amount} HC̸
-              </div>
+      {/* Mobile/Tablet Layout - Full screen board */}
+      <div className="lg:hidden flex flex-col h-full overflow-hidden">
+        {/* Top Player Info - Opponent */}
+        <div className="flex justify-between items-center px-3 py-2 bg-background">
+          <div className="flex items-center gap-2">
+            <div className="text-white font-semibold text-sm">
+              {isPlayer1 ? player2Username || 'Waiting...' : player1Username} 
+              {isPlayer1 ? ' (opponent)' : ' (opponent)'}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-mono text-white">
-              {Math.floor(player1Time / 60)}:{(player1Time % 60).toString().padStart(2, '0')}
+            <div className="text-xl font-mono text-white">
+              {isPlayer1 
+                ? `${Math.floor(player2Time / 60)}:${(player2Time % 60).toString().padStart(2, '0')}`
+                : `${Math.floor(player1Time / 60)}:${(player1Time % 60).toString().padStart(2, '0')}`
+              }
             </div>
           </div>
         </div>
 
         {/* Game Board - Full Width */}
-        <div className="flex-1 flex items-center justify-center px-0">
+        <div className="flex-1 flex items-center justify-center w-full overflow-hidden">
           <div className="w-full aspect-square grid grid-cols-8 grid-rows-8 border-2 border-chess-brown">
             {boardState.map((piece, index) => {
               const row = Math.floor(index / 8);
@@ -525,32 +534,21 @@ const GamePage = () => {
           </div>
         </div>
 
-        {/* Bottom Player Info */}
-        <div className="flex justify-between items-center px-4 py-3 bg-chess-dark/50">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-chess-accent/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-chess-accent" />
-            </div>
-            <div>
-              <div className="text-white font-semibold text-sm">
-                {game.player2_id ? 'Player 2' : 'Waiting...'}
-              </div>
-              {game.status === 'active' && (
-                <div className="text-xs text-chess-accent">
-                  {(isPlayer1 && moveCount % 2 === 0) || (isPlayer2 && moveCount % 2 === 1)
-                    ? "Your turn"
-                    : "Opponent's turn"}
-                </div>
-              )}
+        {/* Bottom Player Info - You */}
+        <div className="flex justify-between items-center px-3 py-2 bg-background">
+          <div className="flex items-center gap-2">
+            <div className="text-white font-semibold text-sm">
+              {isPlayer1 ? player1Username : player2Username || 'You'} (you)
             </div>
           </div>
-          {game.player2_id && (
-            <div className="text-right">
-              <div className="text-2xl font-mono text-white">
-                {Math.floor(player2Time / 60)}:{(player2Time % 60).toString().padStart(2, '0')}
-              </div>
+          <div className="text-right">
+            <div className="text-xl font-mono text-white">
+              {isPlayer1 
+                ? `${Math.floor(player1Time / 60)}:${(player1Time % 60).toString().padStart(2, '0')}`
+                : `${Math.floor(player2Time / 60)}:${(player2Time % 60).toString().padStart(2, '0')}`
+              }
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
