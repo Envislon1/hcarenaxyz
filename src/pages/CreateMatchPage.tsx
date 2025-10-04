@@ -37,7 +37,7 @@ const CreateMatchPage = () => {
   const [isMatching, setIsMatching] = useState<boolean>(false);
 
   const requiredBalance = gameType === "checkers" 
-    ? Math.ceil(stake * 12 * 1.05) // 12 pieces max, 5% fee
+    ? stake * 12 * 1.05 // 12 pieces, 5% fee (e.g., 1 stake = 12.6 total)
     : stake;
 
   if (!user) {
@@ -74,7 +74,8 @@ const CreateMatchPage = () => {
           gameType,
           stake,
           timeLimit,
-          userId: user.id
+          userId: user.id,
+          totalStakeAmount: requiredBalance // Pass calculated total amount
         }
       });
 
@@ -92,7 +93,7 @@ const CreateMatchPage = () => {
       } else {
         // No match found, deduct stake and create new game
         const { data: deductData, error: deductError } = await supabase.functions.invoke('deduct-stake', {
-          body: { playerId: user.id, stakeAmount: stake }
+          body: { playerId: user.id, stakeAmount: requiredBalance }
         });
 
         if (deductError || deductData?.error) {

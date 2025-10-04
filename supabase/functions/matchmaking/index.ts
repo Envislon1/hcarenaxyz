@@ -10,6 +10,7 @@ interface MatchmakingRequest {
   stake: number;
   timeLimit: number;
   userId: string;
+  totalStakeAmount: number;
 }
 
 Deno.serve(async (req) => {
@@ -29,9 +30,9 @@ Deno.serve(async (req) => {
       }
     )
 
-    const { gameType, stake, timeLimit, userId }: MatchmakingRequest = await req.json()
+    const { gameType, stake, timeLimit, userId, totalStakeAmount }: MatchmakingRequest = await req.json()
 
-    console.log('Matchmaking request:', { gameType, stake, timeLimit, userId })
+    console.log('Matchmaking request:', { gameType, stake, timeLimit, userId, totalStakeAmount })
 
     // Try to find a matching pending game (using service role to bypass RLS)
     const { data: existingGames, error: findError } = await supabaseClient
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      if (player2Profile.wallet_balance < stake) {
+      if (player2Profile.wallet_balance < totalStakeAmount) {
         return new Response(
           JSON.stringify({ error: 'Insufficient balance' }),
           { 
@@ -84,10 +85,10 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Deduct stake
+      // Deduct full stake amount (including fee)
       const { error: deductError } = await supabaseClient
         .from('profiles')
-        .update({ wallet_balance: player2Profile.wallet_balance - stake })
+        .update({ wallet_balance: player2Profile.wallet_balance - totalStakeAmount })
         .eq('id', userId)
 
       if (deductError) {
