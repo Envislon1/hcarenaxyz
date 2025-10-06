@@ -142,11 +142,6 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
             </Button>
           )}
           
-          {userIsWinner && (
-            <div className="absolute top-0 right-0 m-2 px-2 py-1 bg-chess-win text-white text-xs rounded-md">
-              +{match.stake} coins
-            </div>
-          )}
         </CardFooter>
       </div>
     </Card>

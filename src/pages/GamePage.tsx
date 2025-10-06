@@ -54,6 +54,8 @@ const GamePage = () => {
   const [showTakebackDialog, setShowTakebackDialog] = useState(false);
   const [takebackRequestId, setTakebackRequestId] = useState<string | null>(null);
   const [takebackRequestFrom, setTakebackRequestFrom] = useState<string | null>(null);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [lowTimeWarning, setLowTimeWarning] = useState(false);
 
   useEffect(() => {
     if (!gameId) return;
@@ -65,6 +67,13 @@ const GamePage = () => {
         setPlayer1Time(gameData.player1_time_remaining);
         setPlayer2Time(gameData.player2_time_remaining);
         setMoveCount(gameData.current_turn - 1);
+        
+        // Play sound when game starts
+        if (gameData.status === 'active' && !gameStarted) {
+          const startSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZQQ0PU6vo7qxdFApIpuLyvGgdBTmO1PLQgCwGIG/D8N2SQAoRYbbp7KJOCw1MqeTwsV0VA0qp4/K3XhQNV7Dq7qZPCA1OquTwrFYSCkyq5PCfUhANUbHo75pIBgdPqeXxnUYFBU6t5vGYRAQDSqzn8ZNABAI=');
+          startSound.play().catch(e => console.log('Could not play start sound:', e));
+          setGameStarted(true);
+        }
         
         // Fetch player usernames
         const p1 = await userService.getUserById(gameData.player1_id);
@@ -225,6 +234,33 @@ const GamePage = () => {
       clearInterval(syncInterval);
     };
   }, [gameId, user, player1Username, player2Username]);
+
+  // Low time warning sound effect
+  useEffect(() => {
+    if (!game || game.status !== 'active') return;
+    
+    const isPlayer1 = user?.id === game.player1_id;
+    const myTime = isPlayer1 ? player1Time : player2Time;
+    
+    // Play beep when time is less than 60 seconds
+    if (myTime < 60 && myTime > 0 && !lowTimeWarning) {
+      setLowTimeWarning(true);
+      const beepSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZQQ0PU6vo7qxdFApIpuLyvGgdBTmO1PLQgCwGIG/D8N2SQAoRYbbp7KJOCw1MqeTwsV0VA0qp4/K3XhQNV7Dq7qZPCA1OquTwrFYSCkyq5PCfUhANUbHo75pIBgdPqeXxnUYFBU6t5vGYRAQDSqzn8ZNABAI=');
+      
+      // Play beep sound repeatedly
+      const beepInterval = setInterval(() => {
+        if (myTime > 0 && myTime < 60) {
+          beepSound.play().catch(e => console.log('Could not play beep:', e));
+        }
+      }, 2000); // Beep every 2 seconds
+      
+      return () => clearInterval(beepInterval);
+    }
+    
+    if (myTime >= 60) {
+      setLowTimeWarning(false);
+    }
+  }, [player1Time, player2Time, game, user, lowTimeWarning]);
 
   // Server-side timer - call edge function every second when game is active
   // Only run timer if both players have made their first move (moveCount > 1)
@@ -612,7 +648,12 @@ const GamePage = () => {
             <div className="text-white font-semibold mb-2">Player 1</div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              <span className="font-mono">{Math.floor(player1Time / 60)}:{(player1Time % 60).toString().padStart(2, '0')}</span>
+              <span 
+                className={`font-mono ${player1Time < 60 ? 'text-[#e2c044] animate-pulse font-bold' : ''}`}
+                style={player1Time < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
+              >
+                {Math.floor(player1Time / 60)}:{(player1Time % 60).toString().padStart(2, '0')}
+              </span>
             </div>
           </Card>
 
@@ -627,7 +668,12 @@ const GamePage = () => {
             {game.player2_id && (
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                <span className="font-mono">{Math.floor(player2Time / 60)}:{(player2Time % 60).toString().padStart(2, '0')}</span>
+                <span 
+                  className={`font-mono ${player2Time < 60 ? 'text-[#e2c044] animate-pulse font-bold' : ''}`}
+                  style={player2Time < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
+                >
+                  {Math.floor(player2Time / 60)}:{(player2Time % 60).toString().padStart(2, '0')}
+                </span>
               </div>
             )}
           </Card>
@@ -848,7 +894,7 @@ const GamePage = () => {
             <h3 className="text-xl font-semibold mb-4 text-white">Takeback Request</h3>
             <p className="mb-6 text-gray-300">{takebackRequestFrom} wants to take back their last move.</p>
             <div className="flex gap-4">
-              <Button onClick={() => handleTakebackResponse(true)} className="flex-1 bg-green-600 hover:bg-green-700">
+              <Button onClick={() => handleTakebackResponse(true)} className="flex-1" style={{ backgroundColor: '#e2c044' }}>
                 Accept
               </Button>
               <Button onClick={() => handleTakebackResponse(false)} variant="outline" className="flex-1">
@@ -895,7 +941,14 @@ const GamePage = () => {
             )}
           </div>
           <div className="text-right">
-            <div className="text-xl font-mono text-white">
+            <div 
+              className={`text-xl font-mono ${
+                (isPlayer1 ? player2Time : player1Time) < 60 
+                  ? 'text-[#e2c044] animate-pulse font-bold' 
+                  : 'text-white'
+              }`}
+              style={(isPlayer1 ? player2Time : player1Time) < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
+            >
               {isPlayer1 
                 ? `${Math.floor(player2Time / 60)}:${(player2Time % 60).toString().padStart(2, '0')}`
                 : `${Math.floor(player1Time / 60)}:${(player1Time % 60).toString().padStart(2, '0')}`
@@ -991,7 +1044,14 @@ const GamePage = () => {
             )}
           </div>
           <div className="text-right">
-            <div className="text-xl font-mono text-white">
+            <div 
+              className={`text-xl font-mono ${
+                (isPlayer1 ? player1Time : player2Time) < 60 
+                  ? 'text-[#e2c044] animate-pulse font-bold' 
+                  : 'text-white'
+              }`}
+              style={(isPlayer1 ? player1Time : player2Time) < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
+            >
               {isPlayer1 
                 ? `${Math.floor(player1Time / 60)}:${(player1Time % 60).toString().padStart(2, '0')}`
                 : `${Math.floor(player2Time / 60)}:${(player2Time % 60).toString().padStart(2, '0')}`
@@ -1042,10 +1102,7 @@ const GamePage = () => {
                     Draw
                   </Button>
                   <Button 
-                    onClick={() => {
-                      setSelectedSquare(null);
-                      setHighlightedMoves([]);
-                    }}
+                    onClick={handleRequestTakeback}
                     variant="outline"
                     className="flex-1 border-blue-500 text-blue-500"
                   >

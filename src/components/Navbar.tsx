@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Menu, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { HolocoinIcon } from '@/components/HolocoinIcon';
 export const Navbar = () => {
   const {
     user,
@@ -62,9 +63,7 @@ export const Navbar = () => {
           
           {user ? <div className="flex items-center space-x-4">
               <Link to="/profile" className="flex items-center">
-                <div className="bg-chess-brown rounded-full w-8 h-8 flex items-center justify-center mr-2">
-                  <span className="text-white">{user.avatar || '♟'}</span>
-                </div>
+                <HolocoinIcon size={32} className="mr-2" />
                 <div className="flex flex-col">
                   <span className="text-white">{user.username}</span>
                   <span className="text-chess-accent">HC̸{displayBalance.toFixed(2)}</span>
@@ -95,9 +94,7 @@ export const Navbar = () => {
           
           {user ? <div className="py-2">
               <Link to="/profile" className="flex items-center py-2" onClick={toggleMobileMenu}>
-                <div className="bg-chess-brown rounded-full w-8 h-8 flex items-center justify-center mr-2">
-                  <span className="text-white">{user.avatar || '♟'}</span>
-                </div>
+                <HolocoinIcon size={32} className="mr-2" />
                 <div>
                   <div className="text-white">{user.username}</div>
                   <div className="text-chess-accent">HC̸{displayBalance.toFixed(2)}</div>

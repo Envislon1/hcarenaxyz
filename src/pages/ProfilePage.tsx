@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services/userService";
 import { useAuth } from "@/context/AuthContext";
@@ -6,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchCard } from "@/components/MatchCard";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { HolocoinIcon } from "@/components/HolocoinIcon";
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -114,9 +113,7 @@ const ProfilePage = () => {
               <CardTitle className="text-xl">{user.username}</CardTitle>
               <CardDescription>Player Profile</CardDescription>
             </div>
-            <Avatar className="h-16 w-16 bg-chess-brown text-2xl">
-              <AvatarFallback>{user.avatar || '♟'}</AvatarFallback>
-            </Avatar>
+            <HolocoinIcon size={64} />
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

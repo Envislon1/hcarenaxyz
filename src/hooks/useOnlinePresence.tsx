@@ -14,20 +14,17 @@ export const useOnlinePresence = () => {
     channel
       .on('presence', { event: 'sync' }, () => {
         const presenceState = channel.presenceState();
-        // Subtract 1 to exclude current user from count
-        const uniqueUsers = Math.max(0, Object.keys(presenceState).length - 1);
+        const uniqueUsers = Object.keys(presenceState).length;
         setOnlineCount(uniqueUsers);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         const presenceState = channel.presenceState();
-        // Subtract 1 to exclude current user from count
-        const uniqueUsers = Math.max(0, Object.keys(presenceState).length - 1);
+        const uniqueUsers = Object.keys(presenceState).length;
         setOnlineCount(uniqueUsers);
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         const presenceState = channel.presenceState();
-        // Subtract 1 to exclude current user from count
-        const uniqueUsers = Math.max(0, Object.keys(presenceState).length - 1);
+        const uniqueUsers = Object.keys(presenceState).length;
         setOnlineCount(uniqueUsers);
       })
       .subscribe(async (status) => {
