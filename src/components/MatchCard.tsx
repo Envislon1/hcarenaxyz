@@ -35,6 +35,13 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
     }
   };
 
+  const getStatusText = () => {
+    if (match.status === 'completed' && !match.winner) {
+      return 'Draw';
+    }
+    return match.status.charAt(0).toUpperCase() + match.status.slice(1);
+  };
+
   const handleJoinWithFee = async () => {
     if (!match.fee_accepted) {
       setShowFeeWarning(true);
@@ -56,7 +63,7 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <Badge variant="outline" className={`${getStatusColor()} text-white`}>
-              {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
+              {getStatusText()}
             </Badge>
             <div className="font-mono text-chess-accent font-bold">
               {match.stake} coins

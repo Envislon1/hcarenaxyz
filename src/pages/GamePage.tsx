@@ -426,6 +426,10 @@ const GamePage = () => {
           newState.tiles
         );
         
+        // Play move sound effect
+        const moveSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZQQ0PU6vo7qxdFApIpuLyvGgdBTmO1PLQgCwGIG/D8N2SQAoRYbbp7KJOCw1MqeTwsV0VA0qp4/K3XhQNV7Dq7qZPCA1OquTwrFYSCkyq5PCfUhANUbHo75pIBgdPqeXxnUYFBU6t5vGYRAQDSqzn8ZNABAI=');
+        moveSound.play().catch(e => console.log('Could not play move sound:', e));
+        
         setSelectedSquare(null);
         setHighlightedMoves([]);
       } catch (error) {

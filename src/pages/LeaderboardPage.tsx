@@ -82,9 +82,24 @@ const LeaderboardPage = () => {
                     <tr key={user.id} className={index < 3 ? "bg-chess-dark/50" : ""}>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          {index === 0 && <Trophy className="h-5 w-5 text-yellow-500 mr-1" />}
-                          {index === 1 && <Trophy className="h-5 w-5 text-gray-400 mr-1" />}
-                          {index === 2 && <Trophy className="h-5 w-5 text-amber-700 mr-1" />}
+                          {index === 0 && (
+                            <>
+                              <Trophy className="h-5 w-5 text-yellow-500 mr-1" />
+                              <span className="text-gray-400">1</span>
+                            </>
+                          )}
+                          {index === 1 && (
+                            <>
+                              <Trophy className="h-5 w-5 text-gray-400 mr-1" />
+                              <span className="text-gray-400">2</span>
+                            </>
+                          )}
+                          {index === 2 && (
+                            <>
+                              <Trophy className="h-5 w-5 text-amber-700 mr-1" />
+                              <span className="text-gray-400">3</span>
+                            </>
+                          )}
                           {index > 2 && <span className="text-gray-400">{index + 1}</span>}
                         </div>
                       </td>

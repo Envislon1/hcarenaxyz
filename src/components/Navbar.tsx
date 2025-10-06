@@ -40,7 +40,8 @@ export const Navbar = () => {
   return <nav className="bg-chess-dark border-b border-chess-brown py-4">
       <div className="container mx-auto px-4 flex justify-between items-center">
         <Link to="/" className="flex items-center space-x-2">
-          <span className="text-2xl text-chess-accent font-bold">♔ HC̸ Arena</span>
+          <HolocoinIcon size={32} className="mr-1" />
+          <span className="text-2xl text-chess-accent font-bold">HC̸ Arena</span>
         </Link>
         
         <button className="md:hidden text-white" onClick={toggleMobileMenu}>
