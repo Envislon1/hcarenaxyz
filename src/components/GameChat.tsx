@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useNotifications } from '@/context/NotificationContext';
 
 interface ChatMessage {
   id: string;
@@ -37,6 +38,7 @@ export const GameChat = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { playSound } = useNotifications();
 
   // Auto-scroll to bottom when chat opens
   useEffect(() => {
@@ -78,9 +80,7 @@ export const GameChat = ({
           
           // Play notification sound if message is from opponent
           if (newMsg.sender_id !== currentUserId) {
-            const notificationSound = new Audio('/sounds/chatnotification.mp3');
-            notificationSound.volume = 0.8;
-            notificationSound.play().catch(e => console.log('Could not play notification:', e));
+            playSound('/sounds/chatnotification.mp3');
             
             // Increment unread count if chat is closed
             if (!isOpen) {
