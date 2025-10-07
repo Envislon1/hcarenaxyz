@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface GameMatchingDialogProps {
   open: boolean;
@@ -71,6 +72,14 @@ export const GameMatchingDialog = ({
               Searching for players...
             </p>
           </div>
+
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="w-full"
+          >
+            Cancel
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

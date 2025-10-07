@@ -150,7 +150,7 @@ const CreateMatchPage = () => {
 
       if (error) throw error;
 
-      if (data.matched) {
+      if (data.matched && data.gameId) {
         // Successfully matched with existing game
         toast({
           title: "Match found!",
@@ -158,7 +158,11 @@ const CreateMatchPage = () => {
         });
         
         setIsMatching(false);
-        navigate(`/game/${data.gameId}`);
+        
+        // Small delay to ensure database is updated
+        setTimeout(() => {
+          navigate(`/game/${data.gameId}`);
+        }, 500);
       } else {
         // No match found, deduct stake and create new game
         const { data: deductData, error: deductError } = await supabase.functions.invoke('deduct-stake', {
@@ -199,10 +203,14 @@ const CreateMatchPage = () => {
 
         // Subscribe to game updates to detect when opponent joins
         const channel = gameService.subscribeToGame(newGame.id, (payload) => {
-          if (payload.new && payload.new.player2_id) {
+          if (payload.new && payload.new.player2_id && payload.new.status === 'active') {
             setIsMatching(false);
             channel.unsubscribe();
-            navigate(`/game/${newGame.id}`);
+            
+            // Small delay to ensure database is fully updated
+            setTimeout(() => {
+              navigate(`/game/${newGame.id}`);
+            }, 500);
           }
         });
 

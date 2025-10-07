@@ -283,6 +283,7 @@ export type Database = {
           games_played: number
           games_won: number
           id: string
+          notifications_enabled: boolean | null
           updated_at: string
           username: string
           wallet_balance: number
@@ -292,6 +293,7 @@ export type Database = {
           games_played?: number
           games_won?: number
           id: string
+          notifications_enabled?: boolean | null
           updated_at?: string
           username: string
           wallet_balance?: number
@@ -301,6 +303,7 @@ export type Database = {
           games_played?: number
           games_won?: number
           id?: string
+          notifications_enabled?: boolean | null
           updated_at?: string
           username?: string
           wallet_balance?: number

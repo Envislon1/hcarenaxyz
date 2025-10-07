@@ -103,9 +103,9 @@ export const Navbar = () => {
             size="sm" 
             onClick={toggleNotifications}
             className="gap-2"
+            title={notificationsEnabled ? 'Notifications On' : 'Notifications Off'}
           >
             {notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-            <span className="hidden lg:inline">Notifications {notificationsEnabled ? 'On' : 'Off'}</span>
           </Button>
 
           {isDesktop && appVersions && appVersions.length > 0 && (
@@ -159,6 +159,18 @@ export const Navbar = () => {
           <Link to="/wallet" className="block py-2 text-white hover:text-chess-accent" onClick={toggleMobileMenu}>
             Wallet
           </Link>
+          
+          {/* Mobile Notification Toggle */}
+          <div className="py-2 flex items-center justify-between border-t border-chess-brown/30 mt-2">
+            <span className="text-white">Notifications</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={toggleNotifications}
+            >
+              {notificationsEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+            </Button>
+          </div>
           
           {isAdmin && (
             <Link to="/admin/revenue" className="block py-2 text-white hover:text-chess-accent" onClick={toggleMobileMenu}>

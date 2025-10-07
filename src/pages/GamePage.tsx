@@ -16,6 +16,7 @@ import {
 } from "@/utils/checkersLogic";
 import { GameChat } from "@/components/GameChat";
 import { useGamePresence } from "@/hooks/useGamePresence";
+import { useNotifications } from "@/context/NotificationContext";
 
 interface GameState {
   id: string;
@@ -58,6 +59,8 @@ const GamePage = () => {
   const [takebackRequestFrom, setTakebackRequestFrom] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [lowTimeWarning, setLowTimeWarning] = useState(false);
+  
+  const { playSound } = useNotifications();
 
   const isPlayer1 = user?.id === game?.player1_id;
   const isPlayer2 = user?.id === game?.player2_id;
@@ -84,9 +87,7 @@ const GamePage = () => {
         
         // Play sound when game starts
         if (gameData.status === 'active' && !gameStarted) {
-          const startSound = new Audio('/sounds/game-start.mp3');
-          startSound.volume = 0.8;
-          startSound.play().catch(e => console.log('Could not play start sound:', e));
+          playSound('/sounds/game-start.mp3');
           setGameStarted(true);
         }
         
@@ -268,13 +269,11 @@ const GamePage = () => {
     // Play beep when time is less than 60 seconds
     if (myTime < 60 && myTime > 0 && !lowTimeWarning) {
       setLowTimeWarning(true);
-      const beepSound = new Audio('/sounds/move.ogg');
-      beepSound.volume = 0.2;
       
       // Play beep sound repeatedly
       const beepInterval = setInterval(() => {
         if (myTime > 0 && myTime < 60) {
-          beepSound.play().catch(e => console.log('Could not play beep:', e));
+          playSound('/sounds/move.ogg');
         }
       }, 2000); // Beep every 2 seconds
       
@@ -478,9 +477,7 @@ const GamePage = () => {
         );
         
         // Play move sound effect
-        const moveSound = new Audio('/sounds/move.ogg');
-        moveSound.volume = 0.4;
-        moveSound.play().catch(e => console.log('Could not play move sound:', e));
+        playSound('/sounds/move.ogg');
         
         setSelectedSquare(null);
         setHighlightedMoves([]);
