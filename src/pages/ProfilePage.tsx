@@ -100,7 +100,7 @@ const ProfilePage = () => {
   const matchHistory = matches.filter((match: any) => match.status === 'completed');
 
   const handleViewDetails = (match: any) => {
-    navigate(`/match/${match.id}`);
+    navigate(`/game/${match.id}`);
   };
 
   return (

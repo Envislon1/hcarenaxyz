@@ -7,6 +7,49 @@ import { useQuery } from "@tanstack/react-query";
 import { MatchCard } from "@/components/MatchCard";
 import { PracticeBoard } from "@/components/PracticeBoard";
 import { supabase } from "@/integrations/supabase/client";
+import { Download } from "lucide-react";
+
+const DownloadButton = ({ platform }: { platform: 'windows' | 'android' }) => {
+  const { data: files } = useQuery({
+    queryKey: [`${platform}-downloads`],
+    queryFn: async () => {
+      const bucketName = platform === 'windows' ? 'windows-exe' : 'android-apk';
+      const { data, error } = await supabase
+        .storage
+        .from(bucketName)
+        .list('', { limit: 1, sortBy: { column: 'created_at', order: 'desc' } });
+
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 60000,
+  });
+
+  if (!files || files.length === 0) return null;
+
+  const latestFile = files[0];
+  const bucketName = platform === 'windows' ? 'windows-exe' : 'android-apk';
+  const { data: publicUrl } = supabase.storage
+    .from(bucketName)
+    .getPublicUrl(latestFile.name);
+
+  return (
+    <a 
+      href={publicUrl.publicUrl} 
+      download
+      className="inline-block"
+    >
+      <Button 
+        size="lg" 
+        variant="outline" 
+        className="border-chess-accent text-chess-accent hover:bg-chess-accent hover:text-black"
+      >
+        <Download className="w-5 h-5 mr-2" />
+        Download {platform === 'windows' ? 'Windows EXE' : 'Android APK'}
+      </Button>
+    </a>
+  );
+};
 export const HomePage = () => {
   const {
     user
@@ -70,7 +113,7 @@ export const HomePage = () => {
       <section className="py-12 px-4 text-center relative">
         <div className="max-w-4xl mx-auto space-y-6">
           <h1 className="text-4xl md:text-6xl font-bold text-white">
-            Stake with <span className="text-chess-accent">Holocoins</span>
+            Stake with <span className="text-chess-accent">HC̸ Coins</span>
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             Play Checkers and Win Holocoins!
@@ -196,6 +239,22 @@ export const HomePage = () => {
             </div>
           </div>
         </section>}
+
+      {/* Download Section - Only show on web platforms */}
+      {!(window as any).Capacitor && (
+        <section className="py-10 border-t border-chess-brown/30">
+          <div className="max-w-4xl mx-auto px-4">
+            <h2 className="text-2xl font-bold text-center mb-6 text-white">Download Desktop & Mobile Apps</h2>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <DownloadButton platform="windows" />
+              <DownloadButton platform="android" />
+            </div>
+            <p className="text-center text-sm text-gray-400 mt-4">
+              Play on the go with our native apps
+            </p>
+          </div>
+        </section>
+      )}
     </div>;
 };
 export default HomePage;

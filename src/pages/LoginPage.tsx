@@ -111,9 +111,9 @@ export const LoginPage = () => {
           <div className="text-center text-xs text-gray-400">
             <p>By logging in, you agree to our</p>
             <p>
-              <a href="#" className="text-chess-accent hover:underline">Terms of Service</a>
+              <Link to="/terms" className="text-chess-accent hover:underline">Terms of Service</Link>
               {" "}&{" "}
-              <a href="#" className="text-chess-accent hover:underline">Privacy Policy</a>
+              <Link to="/privacy" className="text-chess-accent hover:underline">Privacy Policy</Link>
             </p>
           </div>
         </CardFooter>

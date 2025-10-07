@@ -20,6 +20,10 @@ Deno.serve(async (req) => {
 
     console.log('Server-side timer tick for game:', gameId);
 
+    // Get current UTC time from database to ensure accuracy across servers
+    const { data: nowData } = await supabase.rpc('now');
+    const now = new Date(nowData || new Date());
+
     // Get game to determine whose turn it is
     const { data: game, error: gameError } = await supabase
       .from('games')
@@ -37,18 +41,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Determine whose turn it is based on current_turn (odd = player1, even = player2)
+    // Determine whose turn it is based on current_turn
     const isPlayer1Turn = game.current_turn % 2 === 1;
     const updateField = isPlayer1Turn ? 'player1_time_remaining' : 'player2_time_remaining';
     const currentTime = isPlayer1Turn ? game.player1_time_remaining : game.player2_time_remaining;
     const currentPlayerId = isPlayer1Turn ? game.player1_id : game.player2_id;
     
-    // Decrement by 1 second
-    const newTime = Math.max(0, currentTime - 1);
+    // Calculate elapsed time using server UTC time
+    const lastTick = game.timer_last_updated ? new Date(game.timer_last_updated) : (game.started_at ? new Date(game.started_at) : now);
+    const elapsedSeconds = Math.floor((now.getTime() - lastTick.getTime()) / 1000);
+    const newTime = Math.max(0, currentTime - elapsedSeconds);
 
     const { error: updateError } = await supabase
       .from('games')
-      .update({ [updateField]: newTime })
+      .update({ [updateField]: newTime, timer_last_updated: now.toISOString() })
       .eq('id', gameId);
 
     if (updateError) throw updateError;
@@ -59,10 +65,10 @@ Deno.serve(async (req) => {
         ? game.player2_id 
         : game.player1_id;
 
-      // Calculate platform fee (5% of total pot)
+      // Calculate holo fee (5% of total pot)
       const platformFee = game.stake_amount * 24 * 0.05;
 
-      // Update game as completed with winner and platform fee
+      // Update game as completed with winner and holo fee
       const { error: completeError } = await supabase
         .from('games')
         .update({

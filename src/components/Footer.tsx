@@ -7,31 +7,31 @@ export const Footer = () => {
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0 flex items-center space-x-2">
             <HolocoinIcon size={28} />
-            <span className="text-xl text-chess-accent font-bold">HC̸ Arena</span>
+            <span className="text-xl text-chess-accent font-bold">Arena</span>
             <p className="text-gray-400 mt-2 ml-0">Play game. Set stakes. Win coins.</p>
           </div>
           
           <div className="flex flex-col md:flex-row md:space-x-8">
             <a 
-              href="#"
+              href="/about"
               className="text-gray-400 hover:text-chess-accent mb-2 md:mb-0"
             >
               About
             </a>
             <a 
-              href="#"
+              href="/terms"
               className="text-gray-400 hover:text-chess-accent mb-2 md:mb-0"
             >
               Terms of Service
             </a>
             <a 
-              href="#"
+              href="/privacy"
               className="text-gray-400 hover:text-chess-accent mb-2 md:mb-0"
             >
               Privacy Policy
             </a>
             <a 
-              href="#"
+              href="/contact"
               className="text-gray-400 hover:text-chess-accent"
             >
               Contact

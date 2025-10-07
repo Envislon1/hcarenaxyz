@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calculate refund amount (stake + platform fee)
+    // Calculate refund amount (stake + holo fee)
     const refundAmount = Number(game.stake_amount) + Number(game.platform_fee);
 
     // Refund player 1
@@ -103,7 +103,17 @@ Deno.serve(async (req) => {
         .eq('id', game.player2_id);
     }
 
-    // Update game status to cancelled with 0 platform fee
+    // Delete chat messages for this game
+    const { error: chatDeleteError } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('game_id', gameId);
+    
+    if (chatDeleteError) {
+      console.error('Error deleting chat messages:', chatDeleteError);
+    }
+
+    // Update game status to cancelled with 0 holo fee
     const { error: updateError } = await supabase
       .from('games')
       .update({

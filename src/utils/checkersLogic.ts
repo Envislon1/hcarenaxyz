@@ -85,7 +85,6 @@ const findKingMultiJumpPaths = (
   
   let distance = 1;
   let gapCount = 0;
-  let lastEnemyIndex: number | undefined;
   
   // Scan along the direction to find enemy pieces with gaps (minimum 1 gap required)
   while (distance < 8) {
@@ -96,36 +95,47 @@ const findKingMultiJumpPaths = (
     
     if (piece) {
       if (piece.player !== player && !visited.has(scanIndex)) {
-        // Found an enemy piece - check if we have at least 1 gap from last enemy
-        if (lastEnemyIndex !== undefined && gapCount < 1) {
-          // Not enough gap between enemies - stop
+        // Found an enemy piece - check if we have at least 1 gap before this enemy
+        if (gapCount < 1) {
+          // Not enough gap before this enemy - stop searching in this direction
           break;
         }
         
-        // Check all possible landing positions after this enemy
+        // Check all possible landing positions after this enemy (need at least 1 gap after enemy too)
         let landDistance = distance + 1;
+        let landGapCount = 0;
+        
         while (landDistance < 8) {
           const landIndex = coordinatesToIndex(x + dirX * landDistance, y + dirY * landDistance);
           if (landIndex === undefined) break;
           
           const landPiece = state.tiles[landIndex];
           if (!landPiece) {
-            // Can land here - add as a valid destination
-            paths.push([landIndex]);
+            landGapCount++;
             
-            // Also check for further jumps from this position
-            const tempState: GameState = JSON.parse(JSON.stringify(state));
-            tempState.tiles[landIndex] = tempState.tiles[index];
-            tempState.tiles[index] = null;
-            tempState.tiles[scanIndex] = null;
-            
-            const newVisited = new Set(visited);
-            newVisited.add(scanIndex);
-            
-            const furtherPaths = findKingMultiJumpPaths(landIndex, player, tempState, direction, newVisited);
-            furtherPaths.forEach((path) => {
-              paths.push([landIndex, ...path]);
-            });
+            // Need at least 1 gap after the enemy before we can land
+            if (landGapCount >= 1) {
+              // Can land here - add as a valid destination
+              paths.push([landIndex]);
+              
+              // Also check for further jumps from this position in ALL directions
+              const tempState: GameState = JSON.parse(JSON.stringify(state));
+              tempState.tiles[landIndex] = tempState.tiles[index];
+              tempState.tiles[index] = null;
+              tempState.tiles[scanIndex] = null;
+              
+              const newVisited = new Set(visited);
+              newVisited.add(scanIndex);
+              
+              // Check all four diagonal directions for further jumps
+              const allDirections = captureDirections();
+              for (const newDir of allDirections) {
+                const furtherPaths = findKingMultiJumpPaths(landIndex, player, tempState, newDir, newVisited);
+                furtherPaths.forEach((path) => {
+                  paths.push([landIndex, ...path]);
+                });
+              }
+            }
             
             landDistance++;
           } else {
@@ -134,8 +144,8 @@ const findKingMultiJumpPaths = (
           }
         }
         
-        lastEnemyIndex = scanIndex;
-        gapCount = 0;
+        // After processing this enemy, stop - we don't continue past it in this scan
+        break;
       } else {
         // Found own piece or visited enemy - stop
         break;
@@ -164,13 +174,44 @@ const findMultiJumpPaths = (
   const captureDir = captureDirections();
   
   if (king) {
-    // Kings can jump with gaps in each direction
+    // Kings can jump both adjacently (like regular pieces) AND with gaps
     for (let i = 0; i < captureDir.length; i++) {
+      const [adjX, adjY] = captureDir[i];
+      
+      // First, check for adjacent jumps (like regular pieces)
+      const enemyIndex = coordinatesToIndex(x + adjX, y + adjY);
+      
+      if (enemyIndex !== undefined && canJump(enemyIndex, player, captureDir[i], state) && !visited.has(enemyIndex)) {
+        const jumpIndex = coordinatesToIndex(x + adjX * 2, y + adjY * 2);
+        if (jumpIndex !== undefined) {
+          // Create temporary state with this jump
+          const tempState: GameState = JSON.parse(JSON.stringify(state));
+          tempState.tiles[jumpIndex] = tempState.tiles[index];
+          tempState.tiles[index] = null;
+          tempState.tiles[enemyIndex] = null;
+          
+          const newVisited = new Set(visited);
+          newVisited.add(enemyIndex);
+          
+          // Recursively find more jumps (kings continue as kings)
+          const furtherPaths = findMultiJumpPaths(jumpIndex, player, true, tempState, newVisited);
+          
+          if (furtherPaths.length > 0) {
+            furtherPaths.forEach((path) => {
+              paths.push([jumpIndex, ...path]);
+            });
+          } else {
+            paths.push([jumpIndex]);
+          }
+        }
+      }
+      
+      // Also check for long-distance jumps with gaps
       const directionPaths = findKingMultiJumpPaths(index, player, state, captureDir[i], visited);
       paths.push(...directionPaths);
     }
   } else {
-    // Regular pieces jump adjacently only
+    // Regular pieces - adjacent jumps only
     for (let i = 0; i < captureDir.length; i++) {
       const [adjX, adjY] = captureDir[i];
       const enemyIndex = coordinatesToIndex(x + adjX, y + adjY);

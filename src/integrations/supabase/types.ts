@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_emails: {
+        Row: {
+          added_by: string | null
+          created_at: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      app_versions: {
+        Row: {
+          created_at: string | null
+          download_url: string
+          id: string
+          is_current: boolean | null
+          platform: string
+          updated_at: string | null
+          version: string
+        }
+        Insert: {
+          created_at?: string | null
+          download_url: string
+          id?: string
+          is_current?: boolean | null
+          platform: string
+          updated_at?: string | null
+          version: string
+        }
+        Update: {
+          created_at?: string | null
+          download_url?: string
+          id?: string
+          is_current?: boolean | null
+          platform?: string
+          updated_at?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          message: string
+          sender_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          message: string
+          sender_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          message?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       draw_offers: {
         Row: {
           created_at: string
@@ -51,6 +134,7 @@ export type Database = {
       }
       game_moves: {
         Row: {
+          board_state_before: Json | null
           captured_piece: boolean
           from_index: number
           game_id: string
@@ -62,6 +146,7 @@ export type Database = {
           to_index: number
         }
         Insert: {
+          board_state_before?: Json | null
           captured_piece?: boolean
           from_index: number
           game_id: string
@@ -73,6 +158,7 @@ export type Database = {
           to_index: number
         }
         Update: {
+          board_state_before?: Json | null
           captured_piece?: boolean
           from_index?: number
           game_id?: string
@@ -119,6 +205,7 @@ export type Database = {
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           time_limit: number
+          timer_last_updated: string | null
           updated_at: string
           winner_id: string | null
         }
@@ -140,6 +227,7 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           time_limit?: number
+          timer_last_updated?: string | null
           updated_at?: string
           winner_id?: string | null
         }
@@ -161,6 +249,7 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           time_limit?: number
+          timer_last_updated?: string | null
           updated_at?: string
           winner_id?: string | null
         }
@@ -391,15 +480,49 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      game_status: "waiting" | "active" | "completed" | "timeout" | "cancelled"
+      app_role: "admin" | "user" | "ceo"
+      game_status:
+        | "waiting"
+        | "active"
+        | "completed"
+        | "timeout"
+        | "cancelled"
+        | "draw"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -527,7 +650,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      game_status: ["waiting", "active", "completed", "timeout", "cancelled"],
+      app_role: ["admin", "user", "ceo"],
+      game_status: [
+        "waiting",
+        "active",
+        "completed",
+        "timeout",
+        "cancelled",
+        "draw",
+      ],
     },
   },
 } as const

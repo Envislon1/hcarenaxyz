@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
+import { VersionUpdatePrompt } from "@/components/VersionUpdatePrompt";
+import { useVersionCheck } from "@/hooks/useVersionCheck";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -17,16 +19,30 @@ import NotFound from "./pages/NotFound";
 import { Layout } from "./components/Layout";
 import WalletPage from "./pages/WalletPage";
 import AdminRevenuePage from "./pages/AdminRevenuePage";
+import AboutPage from "./pages/AboutPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import ContactPage from "./pages/ContactPage";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+const AppContent = () => {
+  const { showUpdatePrompt, updateInfo, dismissUpdate } = useVersionCheck();
+
+  return (
+    <>
+      <Toaster />
+      <Sonner />
+      {updateInfo && (
+        <VersionUpdatePrompt
+          open={showUpdatePrompt}
+          platform={updateInfo.platform}
+          version={updateInfo.version}
+          downloadUrl={updateInfo.downloadUrl}
+          onDismiss={dismissUpdate}
+        />
+      )}
+      <BrowserRouter>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
@@ -39,10 +55,23 @@ const App = () => (
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/admin/revenue" element={<AdminRevenuePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/contact" element={<ContactPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+      </BrowserRouter>
+    </>
+  );
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <AuthProvider>
+        <AppContent />
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

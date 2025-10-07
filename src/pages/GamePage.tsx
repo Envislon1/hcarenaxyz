@@ -14,6 +14,8 @@ import {
   GameState as CheckersGameState,
   PieceType
 } from "@/utils/checkersLogic";
+import { GameChat } from "@/components/GameChat";
+import { useGamePresence } from "@/hooks/useGamePresence";
 
 interface GameState {
   id: string;
@@ -57,6 +59,18 @@ const GamePage = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [lowTimeWarning, setLowTimeWarning] = useState(false);
 
+  const isPlayer1 = user?.id === game?.player1_id;
+  const isPlayer2 = user?.id === game?.player2_id;
+  const isMyTurn = (isPlayer1 && moveCount % 2 === 0) || (isPlayer2 && moveCount % 2 === 1);
+
+  const { player1Online, player2Online, shouldControlTimer } = useGamePresence(
+    gameId,
+    user?.id,
+    game?.player1_id,
+    game?.player2_id,
+    isMyTurn
+  );
+
   useEffect(() => {
     if (!gameId) return;
 
@@ -70,7 +84,8 @@ const GamePage = () => {
         
         // Play sound when game starts
         if (gameData.status === 'active' && !gameStarted) {
-          const startSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZQQ0PU6vo7qxdFApIpuLyvGgdBTmO1PLQgCwGIG/D8N2SQAoRYbbp7KJOCw1MqeTwsV0VA0qp4/K3XhQNV7Dq7qZPCA1OquTwrFYSCkyq5PCfUhANUbHo75pIBgdPqeXxnUYFBU6t5vGYRAQDSqzn8ZNABAI=');
+          const startSound = new Audio('/sounds/game-start.mp3');
+          startSound.volume = 0.8;
           startSound.play().catch(e => console.log('Could not play start sound:', e));
           setGameStarted(true);
         }
@@ -218,13 +233,21 @@ const GamePage = () => {
           const syncedBoard = latestGame.board_state as any[];
           setBoardState(syncedBoard);
           setMoveCount(latestGame.current_turn - 1);
-          setPlayer1Time(latestGame.player1_time_remaining);
-          setPlayer2Time(latestGame.player2_time_remaining);
           setGame(latestGame);
           updateLegalMoves(syncedBoard, latestGame.current_turn);
+          
+          // Only sync time if it's significantly different (more than 2 seconds)
+          // to avoid overriding the client countdown
+          const timeDiff1 = Math.abs(latestGame.player1_time_remaining - player1Time);
+          const timeDiff2 = Math.abs(latestGame.player2_time_remaining - player2Time);
+          
+          if (timeDiff1 > 2 || timeDiff2 > 2) {
+            setPlayer1Time(latestGame.player1_time_remaining);
+            setPlayer2Time(latestGame.player2_time_remaining);
+          }
         }
       }
-    }, 1000); // Sync every 1 second
+    }, 2000); // Sync every 2 seconds
 
     return () => {
       gameChannel.unsubscribe();
@@ -245,7 +268,8 @@ const GamePage = () => {
     // Play beep when time is less than 60 seconds
     if (myTime < 60 && myTime > 0 && !lowTimeWarning) {
       setLowTimeWarning(true);
-      const beepSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZQQ0PU6vo7qxdFApIpuLyvGgdBTmO1PLQgCwGIG/D8N2SQAoRYbbp7KJOCw1MqeTwsV0VA0qp4/K3XhQNV7Dq7qZPCA1OquTwrFYSCkyq5PCfUhANUbHo75pIBgdPqeXxnUYFBU6t5vGYRAQDSqzn8ZNABAI=');
+      const beepSound = new Audio('/sounds/move.ogg');
+      beepSound.volume = 0.2;
       
       // Play beep sound repeatedly
       const beepInterval = setInterval(() => {
@@ -262,23 +286,49 @@ const GamePage = () => {
     }
   }, [player1Time, player2Time, game, user, lowTimeWarning]);
 
-  // Server-side timer - call edge function every second when game is active
-  // Only run timer if both players have made their first move (moveCount > 1)
+  // Client-side countdown timer for smooth display
   useEffect(() => {
-    if (!game || game.status !== 'active' || !user || moveCount < 2) return;
+    if (!game || game.status !== 'active') return;
+    
+    // Don't start timer until both players have made at least one move
+    if (moveCount < 2) return;
 
-    // Call server to decrement timer every second
-    // Server determines whose turn it is automatically
-    const interval = setInterval(async () => {
-      try {
-        await gameService.updatePlayerTime(game.id);
-      } catch (error) {
-        console.error('Failed to update server timer:', error);
+    const interval = setInterval(() => {
+      const isPlayer1Turn = moveCount % 2 === 0;
+      
+      if (isPlayer1Turn) {
+        setPlayer1Time((prevTime) => Math.max(0, prevTime - 1));
+      } else {
+        setPlayer2Time((prevTime) => Math.max(0, prevTime - 1));
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [game, user, moveCount]);
+  }, [game, moveCount]);
+
+  // Timer control based on player presence
+  useEffect(() => {
+    if (!game || game.status !== 'active' || !gameId) return;
+    
+    // Don't start timer until both players have made at least one move
+    if (moveCount < 2) return;
+    
+    // If neither player online, server controls timer
+    if (!player1Online && !player2Online) {
+      const serverInterval = setInterval(() => {
+        gameService.updatePlayerTime(gameId).catch((e) => console.log('server timer error', e));
+      }, 1000);
+      return () => clearInterval(serverInterval);
+    }
+    
+    // If current user should control timer, send updates to server
+    if (shouldControlTimer) {
+      const controlInterval = setInterval(() => {
+        gameService.updatePlayerTime(gameId).catch((e) => console.log('timer control error', e));
+      }, 1000);
+      return () => clearInterval(controlInterval);
+    }
+  }, [game?.status, gameId, player1Online, player2Online, shouldControlTimer, moveCount]);
 
   const handleTimeout = (winnerId: string | null) => {
     toast({
@@ -423,11 +473,13 @@ const GamePage = () => {
             captured: capturedPieces.length > 0
           },
           moveCount + 1,
-          newState.tiles
+          newState.tiles,
+          boardState
         );
         
         // Play move sound effect
-        const moveSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZQQ0PU6vo7qxdFApIpuLyvGgdBTmO1PLQgCwGIG/D8N2SQAoRYbbp7KJOCw1MqeTwsV0VA0qp4/K3XhQNV7Dq7qZPCA1OquTwrFYSCkyq5PCfUhANUbHo75pIBgdPqeXxnUYFBU6t5vGYRAQDSqzn8ZNABAI=');
+        const moveSound = new Audio('/sounds/move.ogg');
+        moveSound.volume = 0.4;
         moveSound.play().catch(e => console.log('Could not play move sound:', e));
         
         setSelectedSquare(null);
@@ -551,7 +603,7 @@ const GamePage = () => {
         await gameService.acceptDraw(game.id);
         toast({
           title: "Draw Accepted",
-          description: "Game ended in a draw. Stakes returned (minus platform fee).",
+          description: "Game ended in a draw. Stakes returned (minus holo fee).",
         });
       } catch (error) {
         console.error('Draw accept error:', error);
@@ -632,8 +684,6 @@ const GamePage = () => {
     );
   }
 
-  const isPlayer1 = user?.id === game.player1_id;
-  const isPlayer2 = user?.id === game.player2_id;
   const currentPlayerTime = (moveCount % 2 === 0) ? player1Time : player2Time;
   const isGameOver = game.status === 'completed';
   const boardIndices = getBoardIndices();
@@ -647,9 +697,9 @@ const GamePage = () => {
           <Card className="p-4 bg-chess-dark/90 border-chess-brown">
             <div className="flex items-center gap-2 mb-2">
               <User className="w-5 h-5 text-chess-accent" />
-              <span className="text-sm text-gray-400">Player 1</span>
+              <span className="text-sm text-gray-400">{player1Username || 'Player 1'}</span>
             </div>
-            <div className="text-white font-semibold mb-2">Player 1</div>
+            <div className="text-white font-semibold mb-2">{player1Username || 'Player 1'}</div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span 
@@ -659,26 +709,48 @@ const GamePage = () => {
                 {Math.floor(player1Time / 60)}:{(player1Time % 60).toString().padStart(2, '0')}
               </span>
             </div>
+            {game.status === 'active' && isPlayer1 && moveCount % 2 === 0 && (
+              <div className="mt-2 text-xs font-semibold">
+                <span className="text-chess-accent">YOUR TURN</span>
+              </div>
+            )}
           </Card>
 
           <Card className="p-4 bg-chess-dark/90 border-chess-brown">
             <div className="flex items-center gap-2 mb-2">
               <User className="w-5 h-5 text-chess-accent" />
-              <span className="text-sm text-gray-400">Player 2</span>
+              <span className="text-sm text-gray-400">{player2Username || 'Player 2'}</span>
             </div>
             <div className="text-white font-semibold mb-2">
-              {game.player2_id ? 'Player 2' : 'Waiting...'}
+              {game.player2_id ? (player2Username || 'Player 2') : 'Waiting...'}
             </div>
             {game.player2_id && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span 
-                  className={`font-mono ${player2Time < 60 ? 'text-[#e2c044] animate-pulse font-bold' : ''}`}
-                  style={player2Time < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
-                >
-                  {Math.floor(player2Time / 60)}:{(player2Time % 60).toString().padStart(2, '0')}
-                </span>
-              </div>
+              <>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span 
+                    className={`font-mono ${player2Time < 60 ? 'text-[#e2c044] animate-pulse font-bold' : ''}`}
+                    style={player2Time < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
+                  >
+                    {Math.floor(player2Time / 60)}:{(player2Time % 60).toString().padStart(2, '0')}
+                  </span>
+                </div>
+                {game.status === 'active' && isPlayer1 && moveCount % 2 === 1 && (
+                  <div className="mt-2 text-xs font-semibold">
+                    <span className="text-[#e2c044]">OPPONENT'S TURN</span>
+                  </div>
+                )}
+                {game.status === 'active' && isPlayer2 && moveCount % 2 === 1 && (
+                  <div className="mt-2 text-xs font-semibold">
+                    <span className="text-chess-accent">YOUR TURN</span>
+                  </div>
+                )}
+                {game.status === 'active' && isPlayer2 && moveCount % 2 === 0 && (
+                  <div className="mt-2 text-xs font-semibold">
+                    <span className="text-[#e2c044]">OPPONENT'S TURN</span>
+                  </div>
+                )}
+              </>
             )}
           </Card>
 
@@ -747,7 +819,7 @@ const GamePage = () => {
                     className={`
                       relative flex items-center justify-center cursor-pointer transition-all
                       ${isLight ? 'bg-chess-light' : 'bg-chess-brown'}
-                      ${canMoveFromHere && !isSelected ? 'shadow-[0_0_15px_rgba(255,237,74,0.8)] animate-pulse' : ''}
+                      ${canMoveFromHere && !isSelected ? 'shadow-[0_0_12px_rgba(255,237,74,0.8)] animate-pulse' : ''}
                       hover:opacity-80
                     `}
                     style={{
@@ -844,7 +916,7 @@ const GamePage = () => {
             <h3 className="text-xl font-semibold mb-4 text-white">Rematch Offer</h3>
             <p className="mb-6 text-gray-300">Your opponent wants a rematch! Same stakes will be deducted.</p>
             <div className="flex gap-4">
-              <Button onClick={() => handleRematchResponse(true)} className="flex-1 bg-green-600 hover:bg-green-700">
+              <Button onClick={() => handleRematchResponse(true)} className="flex-1 bg-chess-accent hover:bg-chess-accent/80 text-black">
                 Accept
               </Button>
               <Button onClick={() => handleRematchResponse(false)} variant="outline" className="flex-1">
@@ -860,7 +932,7 @@ const GamePage = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="p-6 max-w-md mx-4 bg-chess-dark border-chess-brown">
             <h3 className="text-xl font-semibold mb-4 text-white">Draw Offer</h3>
-            <p className="mb-6 text-gray-300">Your opponent is offering a draw. Both players will get their stakes back (minus platform fee).</p>
+            <p className="mb-6 text-gray-300">Your opponent is offering a draw. Both players will get their stakes back (minus holo fee).</p>
             <div className="flex gap-4">
               <Button onClick={() => handleDrawResponse(true)} className="flex-1 bg-chess-accent hover:bg-chess-accent/80 text-black">
                 Accept Draw
@@ -914,7 +986,7 @@ const GamePage = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="p-6 max-w-md mx-4 bg-chess-dark border-chess-brown">
             <h3 className="text-xl font-semibold mb-4 text-white">Cancel Game?</h3>
-            <p className="mb-6 text-gray-300">Are you sure you want to cancel? All coins including platform fees will be refunded to both players.</p>
+            <p className="mb-6 text-gray-300">Are you sure you want to cancel? All coins including holo fees will be refunded to both players.</p>
             <div className="flex gap-4">
               <Button onClick={handleCancel} variant="outline" className="flex-1 border-red-500 text-red-500">
                 Yes, Cancel
@@ -930,17 +1002,17 @@ const GamePage = () => {
       {/* Mobile/Tablet Layout - Full screen board */}
       <div className="lg:hidden flex flex-col min-h-screen justify-between">
         {/* Top Player Info - Opponent */}
-        <div className="flex justify-between items-center px-4 py-3 bg-background">
+        <div className="flex justify-between items-center px-4 py-2 bg-background">
           <div className="flex items-center gap-2">
             <div className="text-white font-semibold text-sm">
               {isPlayer1 ? player2Username || 'Waiting...' : player1Username} 
               {isPlayer1 ? ' (opponent)' : ' (opponent)'}
             </div>
             {game.status === 'active' && (
-              <div className="text-xs text-chess-accent font-semibold">
-                {((isPlayer1 && moveCount % 2 === 1) || (!isPlayer1 && moveCount % 2 === 0))
-                  ? "OPPONENT'S TURN"
-                  : ""}
+              <div className="text-xs font-semibold">
+                {((isPlayer1 && moveCount % 2 === 0) || (!isPlayer1 && moveCount % 2 === 1))
+                  ? <span className="text-chess-accent">YOUR TURN</span>
+                  : <span className="text-[#e2c044]">OPPONENT'S TURN</span>}
               </div>
             )}
           </div>
@@ -1034,18 +1106,11 @@ const GamePage = () => {
         </div>
 
         {/* Bottom Player Info - You */}
-        <div className="flex justify-between items-center px-4 py-3 bg-background">
+        <div className="flex justify-between items-center px-4 py-2 bg-background">
           <div className="flex items-center gap-2">
             <div className="text-white font-semibold text-sm">
               {isPlayer1 ? player1Username : player2Username || 'You'} (you)
             </div>
-            {game.status === 'active' && (
-              <div className="text-xs text-chess-accent font-semibold">
-                {((isPlayer1 && moveCount % 2 === 0) || (!isPlayer1 && moveCount % 2 === 1))
-                  ? "YOUR TURN"
-                  : ""}
-              </div>
-            )}
           </div>
           <div className="text-right">
             <div 
@@ -1130,6 +1195,18 @@ const GamePage = () => {
           </div>
         )}
       </div>
+
+      {/* Game Chat - Only show if game is active or both players accepted rematch */}
+      {game.player1_id && game.player2_id && user && game.status === 'active' && (
+        <GameChat
+          gameId={game.id}
+          currentUserId={user.id}
+          player1Id={game.player1_id}
+          player2Id={game.player2_id}
+          player1Username={player1Username}
+          player2Username={player2Username}
+        />
+      )}
     </div>
   );
 };

@@ -223,7 +223,7 @@ export const PracticeBoard = () => {
           <p className="text-sm text-gray-400">
             {gameOver 
               ? winner === 1 ? "You Won! 🎉" : "AI Won!"
-              : currentTurn === 1 ? "Your Turn (Red)" : "AI's Turn (Black)"
+              : currentTurn === 1 ? "Your Turn (White)" : "AI's Turn (Black)"
             }
           </p>
         </div>
@@ -257,60 +257,45 @@ export const PracticeBoard = () => {
           const col = index % 8;
           const isLight = (row + col) % 2 === 0;
           const isSelected = selectedSquare === index;
+          const isHighlighted = highlightedMoves.includes(index);
           const notation = indexToNotation(index);
 
-          const renderPiece = () => {
-            if (!piece || !piece.player) return null;
-            
-            const colors = piece.player === 1 
-              ? { outer: 'rgb(255, 255, 255)', inner: 'rgb(66, 66, 66)' }
-              : { outer: 'rgb(0, 0, 0)', inner: 'rgb(30, 30, 30)' };
-            
-            return (
-              <div 
-                className="w-[70%] h-[70%] rounded-full flex items-center justify-center"
-                style={{
-                  backgroundColor: colors.outer,
-                  boxShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-                }}
-              >
+          return (
+            <div
+              key={index}
+              onClick={() => handleSquareClick(index)}
+              className={`
+                relative flex items-center justify-center cursor-pointer transition-all
+                ${isLight ? 'bg-chess-light' : 'bg-chess-brown'}
+                
+                hover:opacity-80
+              `}
+              style={{
+                ...(isHighlighted && {
+                  backgroundColor: 'rgba(255, 237, 74, 0.4)',
+                  boxShadow: '0 0 25px rgba(255, 237, 74, 0.7) inset'
+                })
+              }}
+            >
+              {piece && (
                 <div 
-                  className="w-[85%] h-[85%] rounded-full flex flex-col items-center justify-center"
-                  style={{ backgroundColor: colors.inner }}
-                >
-                  {piece.king && <span className="text-base">👑</span>}
-                  <span className="text-[8px] font-bold text-yellow-400">1hc</span>
-                </div>
-              </div>
-            );
-          };
-
-              const isHighlighted = highlightedMoves.includes(index);
-              const canMoveFromHere = legalMoves.has(index) && currentTurn === 1 && boardState[index]?.player === 1;
-
-              return (
-                <div
-                  key={index}
-                  onClick={() => handleSquareClick(index)}
-                  className={`
-                    relative flex items-center justify-center cursor-pointer transition-all
-                    ${isLight ? 'bg-chess-light' : 'bg-chess-brown'}
-                    ${isSelected ? 'ring-4 ring-chess-accent' : ''}
-                    ${canMoveFromHere && !isSelected ? 'ring-2 ring-yellow-400 animate-glow-blink' : ''}
-                    hover:opacity-80
-                  `}
+                  className="w-[70%] h-[70%] rounded-full flex items-center justify-center"
                   style={{
-                    ...(isHighlighted && {
-                      backgroundColor: '#e2c044',
-                      opacity: 0.4,
-                      boxShadow: '0 0 20px rgba(226, 192, 68, 0.6) inset'
-                    })
+                    backgroundColor: piece.player === 1 ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)',
+                    boxShadow: '2px 2px 4px rgba(0,0,0,0.3)'
                   }}
                 >
-              {renderPiece()}
-              <div className="absolute bottom-0.5 right-0.5 text-[8px] opacity-50 font-mono">
-                {notation}
-              </div>
+                  <div 
+                    className="w-[85%] h-[85%] rounded-full flex flex-col items-center justify-center"
+                    style={{
+                      backgroundColor: piece.player === 1 ? 'rgb(66, 66, 66)' : 'rgb(30, 30, 30)'
+                    }}
+                  >
+                    {piece.king && <span className="text-base">👑</span>}
+                    
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

@@ -82,53 +82,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Track online presence and update database
+  // Track online presence and report to database
   useEffect(() => {
     if (!user) return;
 
-    const presenceChannel = supabase.channel('online_users');
-    let hasTracked = false;
-
-    // Get stats ID once on mount
-    const updatePlayersOnline = async (count: number) => {
-      const { data: stats } = await supabase.from('realtime_stats').select('id').maybeSingle();
-      if (stats?.id) {
-        await supabase
+    const reportOnline = async () => {
+      try {
+        const { data: stats } = await supabase
           .from('realtime_stats')
-          .update({ players_online: count, updated_at: new Date().toISOString() })
-          .eq('id', stats.id);
+          .select('id, players_online')
+          .maybeSingle();
+        
+        if (stats?.id) {
+          // Increment online count
+          await supabase
+            .from('realtime_stats')
+            .update({ 
+              players_online: (stats.players_online || 0) + 1,
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', stats.id);
+        }
+      } catch (error) {
+        console.error('Error reporting online status:', error);
       }
     };
 
-    presenceChannel
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = presenceChannel.presenceState();
-        const uniqueUsers = Object.keys(presenceState).length;
-        updatePlayersOnline(uniqueUsers);
-      })
-      .on('presence', { event: 'join' }, () => {
-        const presenceState = presenceChannel.presenceState();
-        const uniqueUsers = Object.keys(presenceState).length;
-        updatePlayersOnline(uniqueUsers);
-      })
-      .on('presence', { event: 'leave' }, () => {
-        const presenceState = presenceChannel.presenceState();
-        const uniqueUsers = Object.keys(presenceState).length;
-        updatePlayersOnline(uniqueUsers);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED' && !hasTracked) {
-          hasTracked = true;
-          await presenceChannel.track({
-            user_id: user.id,
-            online_at: new Date().toISOString(),
-          });
+    const reportOffline = async () => {
+      try {
+        const { data: stats } = await supabase
+          .from('realtime_stats')
+          .select('id, players_online')
+          .maybeSingle();
+        
+        if (stats?.id) {
+          // Decrement online count (don't go below 0)
+          await supabase
+            .from('realtime_stats')
+            .update({ 
+              players_online: Math.max(0, (stats.players_online || 0) - 1),
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', stats.id);
         }
-      });
+      } catch (error) {
+        console.error('Error reporting offline status:', error);
+      }
+    };
+
+    // Report online when user logs in
+    reportOnline();
+
+    // Report offline when user leaves the page or closes the browser
+    const handleBeforeUnload = () => {
+      reportOffline();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      presenceChannel.untrack();
-      supabase.removeChannel(presenceChannel);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      reportOffline();
     };
   }, [user]);
 

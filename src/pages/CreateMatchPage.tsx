@@ -95,6 +95,25 @@ const CreateMatchPage = () => {
       return;
     }
 
+    // Check for pending games
+    const { data: pendingGame } = await supabase
+      .from('games')
+      .select('*')
+      .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+      .eq('status', 'waiting')
+      .limit(1)
+      .maybeSingle();
+
+    if (pendingGame) {
+      toast({
+        title: "Pending game exists",
+        description: "You have a pending game. Please cancel it or wait for an opponent.",
+        variant: "destructive",
+      });
+      navigate(`/matches`);
+      return;
+    }
+
     if (activeGame) {
       toast({
         title: "Active game exists",
@@ -147,10 +166,18 @@ const CreateMatchPage = () => {
         });
 
         if (deductError || deductData?.error) {
-          throw new Error(deductData?.error || 'Failed to deduct stake');
+          const errorMessage = deductData?.error || deductError?.message || 'Failed to deduct stake';
+          
+          // Check if it's an insufficient balance error
+          if (errorMessage.toLowerCase().includes('insufficient') || 
+              errorMessage.toLowerCase().includes('balance')) {
+            throw new Error('Insufficient balance to create this match.');
+          }
+          
+          throw new Error(errorMessage);
         }
 
-        // Calculate platform fee (5% of total pot - both players' stakes)
+        // Calculate holo fee (5% of total pot - both players' stakes)
         const platformFee = stake * 24 * 0.05;
         
         const { data: newGame, error: createError } = await supabase
@@ -203,23 +230,6 @@ const CreateMatchPage = () => {
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
-      {/* Real-time stats card */}
-      <Card className="border-chess-brown/50 bg-chess-dark/90">
-        <CardContent className="pt-6">
-          <div className="flex justify-around text-center">
-            <div>
-              <div className="text-3xl font-bold text-chess-accent">{onlineCount || 0}</div>
-              <div className="text-sm text-muted-foreground">Players Online</div>
-            </div>
-            <div className="h-12 w-px bg-chess-brown/30" />
-            <div>
-              <div className="text-3xl font-bold text-chess-accent">{gamesPlaying || 0}</div>
-              <div className="text-sm text-muted-foreground">Games Playing</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="border-chess-brown/50 bg-chess-dark/90">
         <CardHeader>
           <CardTitle className="text-2xl">Create a Match</CardTitle>
@@ -281,7 +291,7 @@ const CreateMatchPage = () => {
               <span className="font-bold">HC̸{stake.toFixed(1)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>Platform fee (5%):</span>
+              <span>Holo fee:</span>
               <span className="font-bold">HC̸{(stake * 12 * 0.05).toFixed(1)}</span>
             </div>
             <div className="flex justify-between text-sm border-t border-chess-brown/30 pt-2 mt-2">

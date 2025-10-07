@@ -28,7 +28,9 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
   const getStatusColor = () => {
     switch (match.status) {
       case 'active': return 'bg-blue-600';
-      case 'completed': return 'bg-gray-600';
+      case 'completed': 
+        // If it's a draw (no winner), use grey, otherwise use #e2c044
+        return match.winner ? 'text-black' : 'bg-gray-600';
       case 'pending': return 'bg-amber-600';
       case 'cancelled': return 'bg-red-600';
       default: return 'bg-gray-600';
@@ -62,7 +64,11 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
       <div className="relative">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
-            <Badge variant="outline" className={`${getStatusColor()} text-white`}>
+            <Badge 
+              variant="outline" 
+              className={`${getStatusColor()} text-white`}
+              style={match.status === 'completed' && match.winner ? { backgroundColor: '#050400' } : {}}
+            >
               {getStatusText()}
             </Badge>
             <div className="font-mono text-chess-accent font-bold">
@@ -86,7 +92,7 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
           {match.status === 'completed' && match.winner && (
             <div className="mt-3 text-center">
               <span className="text-gray-400">Winner: </span>
-              <span className={`font-semibold ${userIsWinner ? 'text-chess-win' : ''}`}>
+              <span className={`font-semibold ${userIsWinner ? 'text-chess-win' : ''}`} style={{ color: '#e2c044' }}>
                 {match.winner === match.whitePlayerId ? match.whiteUsername : match.blackUsername}
               </span>
             </div>
@@ -129,9 +135,18 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
           )}
           
           {match.status === 'pending' && isUserInMatch && (
-            <Button disabled variant="outline" className="w-full">
-              Waiting for opponent
-            </Button>
+            <div className="w-full space-y-2">
+              <Button disabled variant="outline" className="w-full">
+                Waiting for opponent
+              </Button>
+              <Button 
+                onClick={() => window.location.href = `/game/${match.id}`}
+                variant="secondary"
+                className="w-full"
+              >
+                View
+              </Button>
+            </div>
           )}
           
           {match.status === 'active' && isUserInMatch && (

@@ -92,14 +92,34 @@ export const gameService = {
   },
 
   // Make a move
-  makeMove: async (gameId: string, playerId: string, move: GameMove, moveNumber: number, newBoardState: any[]) => {
+  makeMove: async (gameId: string, playerId: string, move: GameMove, moveNumber: number, newBoardState: any[], previousBoardState: any[]) => {
     try {
-      // Update game board state and turn only (no move logging)
+      // Calculate from and to indices from notation
+      const fromIndex = notationToIndex(move.from);
+      const toIndex = notationToIndex(move.to);
+      
+      // Log the move with previous board state for takeback functionality
+      const { error: logError } = await supabase
+        .from('game_moves')
+        .insert({
+          game_id: gameId,
+          player_id: playerId,
+          move_number: moveNumber,
+          from_index: fromIndex,
+          to_index: toIndex,
+          captured_piece: move.captured || false,
+          board_state_before: previousBoardState
+        });
+
+      if (logError) console.error("Move logging error:", logError);
+
+      // Update game board state, turn, and timer_last_updated to prevent timer reset
       const { error: updateError } = await supabase
         .from('games')
         .update({
           board_state: newBoardState,
-          current_turn: moveNumber + 1
+          current_turn: moveNumber + 1,
+          timer_last_updated: new Date().toISOString()
         })
         .eq('id', gameId);
 
@@ -364,9 +384,22 @@ export const gameService = {
 
       if (gameError) throw gameError;
 
-      // Only allow takeback if there have been moves
-      if (gameData.current_turn <= 1) {
-        throw new Error('No moves to take back');
+      // Only allow takeback if there have been at least 2 moves
+      if (gameData.current_turn <= 2) {
+        throw new Error('Not enough moves to take back');
+      }
+
+      // Get the board state from 2 moves ago (revert twice)
+      const { data: previousMove, error: moveError } = await supabase
+        .from('game_moves')
+        .select('board_state_before')
+        .eq('game_id', gameId)
+        .eq('move_number', gameData.current_turn - 2)
+        .single();
+
+      if (moveError) {
+        console.error("Error fetching previous move:", moveError);
+        throw new Error('Cannot find previous board state');
       }
 
       // Update request status
@@ -377,11 +410,13 @@ export const gameService = {
 
       if (updateError) throw updateError;
 
-      // Decrement turn counter
+      // Restore board state from 2 moves ago and decrement turn counter by 2
+      // This gives the turn back to the initiator
       const { error: gameUpdateError } = await supabase
         .from('games')
         .update({
-          current_turn: gameData.current_turn - 1
+          board_state: previousMove.board_state_before,
+          current_turn: gameData.current_turn - 2
         })
         .eq('id', gameId);
 

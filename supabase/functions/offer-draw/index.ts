@@ -44,7 +44,17 @@ Deno.serve(async (req) => {
     }
 
     if (accept) {
-      // Complete game as draw - return stakes minus platform fee to both players
+      // Delete chat messages for this game
+      const { error: chatDeleteError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('game_id', gameId);
+      
+      if (chatDeleteError) {
+        console.error('Error deleting chat messages:', chatDeleteError);
+      }
+
+      // Complete game as draw - return stakes minus holo fee to both players
       const { error: updateError } = await supabase
         .from('games')
         .update({
@@ -56,7 +66,7 @@ Deno.serve(async (req) => {
 
       if (updateError) throw updateError;
 
-      // Return original stake to both players (minus platform fee already deducted at game start)
+      // Return original stake to both players (minus holo fee already deducted at game start)
       const returnAmount = game.stake_amount;
 
       // Update player 1 balance

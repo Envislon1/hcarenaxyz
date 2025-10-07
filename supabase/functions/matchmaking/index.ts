@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
         )
       }
 
+      // Update the game to active status and add player 2
       const { data: updatedGame, error: joinError } = await supabaseClient
         .from('games')
         .update({
@@ -110,11 +111,12 @@ Deno.serve(async (req) => {
           started_at: new Date().toISOString()
         })
         .eq('id', gameToJoin.id)
+        .eq('status', 'waiting') // Only join games that are waiting
         .is('player2_id', null) // Ensure no one else joined
         .select()
-        .single()
+        .maybeSingle() // Use maybeSingle instead of single to handle race conditions
 
-      if (joinError) {
+      if (joinError || !updatedGame) {
         console.error('Error joining game:', joinError)
         // Refund stake if join fails
         await supabaseClient
