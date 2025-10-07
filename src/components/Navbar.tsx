@@ -97,16 +97,18 @@ export const Navbar = () => {
             </Link>
           )}
           
-          {/* Notification Settings */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={toggleNotifications}
-            className="gap-2"
-            title={notificationsEnabled ? 'Notifications On' : 'Notifications Off'}
-          >
-            {notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-          </Button>
+          {/* Notification Settings - Only show when logged in */}
+          {user && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={toggleNotifications}
+              className="gap-2"
+              title={notificationsEnabled ? 'Notifications On' : 'Notifications Off'}
+            >
+              {notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            </Button>
+          )}
 
           {isDesktop && appVersions && appVersions.length > 0 && (
             <DropdownMenu>
@@ -160,17 +162,19 @@ export const Navbar = () => {
             Wallet
           </Link>
           
-          {/* Mobile Notification Toggle */}
-          <div className="py-2 flex items-center justify-between border-t border-chess-brown/30 mt-2">
-            <span className="text-white">Notifications</span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={toggleNotifications}
-            >
-              {notificationsEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-            </Button>
-          </div>
+          {/* Mobile Notification Toggle - Only show when logged in */}
+          {user && (
+            <div className="py-2 flex items-center justify-between border-t border-chess-brown/30 mt-2">
+              <span className="text-white">Notifications</span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={toggleNotifications}
+              >
+                {notificationsEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+              </Button>
+            </div>
+          )}
           
           {isAdmin && (
             <Link to="/admin/revenue" className="block py-2 text-white hover:text-chess-accent" onClick={toggleMobileMenu}>

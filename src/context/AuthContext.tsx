@@ -235,12 +235,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await userService.logout();
       setUser(null);
+      setLoading(false); // Ensure loading is false after logout
       toast({
         title: "Logged out",
         description: "You've been successfully logged out",
       });
     } catch (error) {
       console.error('Logout failed:', error);
+      setLoading(false); // Ensure loading is false even on error
       toast({
         title: "Logout failed",
         description: "An error occurred during logout",
