@@ -25,6 +25,7 @@ const WalletPage = () => {
   const [accountName, setAccountName] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paystackUrl, setPaystackUrl] = useState<string>('');
 
   const { data: wallet, isLoading, refetch } = useQuery({
     queryKey: ['wallet', user?.id],
@@ -152,42 +153,13 @@ const WalletPage = () => {
           payment_reference: response.data.data.reference
         });
 
-        // Load Paystack inline script if not already loaded
-        if (!(window as any).PaystackPop) {
-          const script = document.createElement('script');
-          script.src = 'https://js.paystack.co/v1/inline.js';
-          document.body.appendChild(script);
-          await new Promise((resolve) => script.onload = resolve);
-        }
-
-        // Initialize Paystack inline checkout
-        const handler = (window as any).PaystackPop.setup({
-          key: response.data.data.access_code ? undefined : 'pk_test_' + response.data.data.reference.slice(0, 10),
-          email: user.email,
-          amount: depositAmount * 100,
-          ref: response.data.data.reference,
-          onClose: function() {
-            setIsProcessing(false);
-            setIsDepositOpen(false);
-            toast({
-              title: 'Cancelled',
-              description: 'Payment was cancelled',
-              variant: 'destructive',
-            });
-          },
-          callback: function(response: any) {
-            setIsProcessing(false);
-            setIsDepositOpen(false);
-            setAmount('');
-            toast({
-              title: 'Success',
-              description: 'Payment successful! Your wallet will be updated shortly.',
-            });
-            refetch();
-          }
+        // Set the Paystack authorization URL to display in iframe
+        setPaystackUrl(response.data.data.authorization_url);
+        
+        toast({
+          title: 'Redirecting to payment',
+          description: 'Please complete your payment in the form below',
         });
-
-        handler.openIframe();
       } else {
         throw new Error('Failed to initialize payment');
       }
@@ -197,9 +169,17 @@ const WalletPage = () => {
         description: error instanceof Error ? error.message : 'Failed to process deposit',
         variant: 'destructive',
       });
+      setIsDepositOpen(false);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleDepositClose = () => {
+    setIsDepositOpen(false);
+    setPaystackUrl('');
+    setAmount('');
+    refetch();
   };
 
   const verifyAccount = async () => {
@@ -395,54 +375,75 @@ const WalletPage = () => {
         <HolocoinInfo />
       </div>
 
-      <Dialog open={isDepositOpen} onOpenChange={setIsDepositOpen}>
-        <DialogContent className="bg-chess-dark border-chess-brown text-white">
+      <Dialog open={isDepositOpen} onOpenChange={handleDepositClose}>
+        <DialogContent className="bg-chess-dark border-chess-brown text-white max-w-2xl">
           <DialogHeader>
             <DialogTitle>Deposit Funds</DialogTitle>
             <DialogDescription>
-              Confirm your deposit of ₦{Number(amount).toLocaleString() || '0'}
+              {paystackUrl ? 'Complete your payment below' : `Confirm your deposit of ₦${Number(amount).toLocaleString() || '0'}`}
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleDepositConfirm} className="space-y-4">
-            <div className="space-y-2">
-              <div className="p-4 bg-chess-brown/20 rounded-lg border border-chess-brown/50">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-400">Amount</span>
-                  <span className="text-lg font-bold">₦{Number(amount).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-400">You'll receive</span>
-                  <span className="text-lg font-bold text-chess-accent">
-                    {(Number(amount) / nairaRate).toFixed(2)} HC̸
-                  </span>
+          {!paystackUrl ? (
+            <form onSubmit={handleDepositConfirm} className="space-y-4">
+              <div className="space-y-2">
+                <div className="p-4 bg-chess-brown/20 rounded-lg border border-chess-brown/50">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-400">Amount</span>
+                    <span className="text-lg font-bold">₦{Number(amount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-400">You'll receive</span>
+                    <span className="text-lg font-bold text-chess-accent">
+                      {(Number(amount) / nairaRate).toFixed(2)} HC̸
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="text-sm text-gray-400 space-y-1">
-              <p>• Secure payment via Paystack</p>
-              <p>• Funds reflect instantly after payment</p>
-              <p>• You'll be redirected to complete payment</p>
+              <div className="text-sm text-gray-400 space-y-1">
+                <p>• Secure payment via Paystack</p>
+                <p>• Funds reflect instantly after payment</p>
+                <p>• Complete payment in the next step</p>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleDepositClose}
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? 'Processing...' : 'Proceed to Payment'}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="w-full h-[500px] rounded-lg overflow-hidden border border-chess-brown/50">
+                <iframe
+                  src={paystackUrl}
+                  className="w-full h-full"
+                  title="Paystack Payment"
+                />
+              </div>
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleDepositClose}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
             </div>
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsDepositOpen(false)}
-                disabled={isProcessing}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
-              </Button>
-            </DialogFooter>
-          </form>
+          )}
         </DialogContent>
       </Dialog>
 
