@@ -12,7 +12,7 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY') || 'sk_test_15e8f8988e2fb1529ab6f0584fceb3dcc903d92d'
+  const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY')
   if (!PAYSTACK_SECRET_KEY) {
     throw new Error('PAYSTACK_SECRET_KEY is not set')
   }
