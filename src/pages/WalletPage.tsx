@@ -160,13 +160,18 @@ const WalletPage = () => {
 
     setIsVerifying(true);
     try {
-      const response = await fetch(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_PAYSTACK_PUBLIC_KEY}`
+      const response = await supabase.functions.invoke('verify-account', {
+        body: { 
+          accountNumber,
+          bankCode
         }
       });
       
-      const data = await response.json();
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const data = response.data;
       if (data.status) {
         setAccountName(data.data.account_name);
         toast({
@@ -183,7 +188,7 @@ const WalletPage = () => {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to verify account',
+        description: error instanceof Error ? error.message : 'Failed to verify account',
         variant: 'destructive',
       });
     } finally {
