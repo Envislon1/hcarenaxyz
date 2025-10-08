@@ -18,13 +18,11 @@ const WalletPage = () => {
   const { toast } = useToast();
   const [amount, setAmount] = useState('');
   const [transactionType, setTransactionType] = useState<'deposit' | 'withdraw'>('deposit');
-  const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isWithdrawalOpen, setIsWithdrawalOpen] = useState(false);
   const [bankCode, setBankCode] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: wallet, isLoading, refetch } = useQuery({
     queryKey: ['wallet', user?.id],
@@ -88,22 +86,7 @@ const WalletPage = () => {
   const minDeposit = 5000;
   const minWithdrawal = 5000;
 
-  const handleDepositClick = () => {
-    const depositAmount = Number(amount);
-    if (isNaN(depositAmount) || depositAmount < minDeposit) {
-      toast({
-        title: 'Error',
-        description: `Minimum deposit amount is ₦${minDeposit.toLocaleString()}`,
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsDepositOpen(true);
-  };
-
-  const handleDepositConfirm = async (e: FormEvent) => {
-    e.preventDefault();
-    
+  const handleDeposit = async () => {
     if (!user) {
       toast({
         title: 'Error',
@@ -132,7 +115,6 @@ const WalletPage = () => {
       return;
     }
 
-    setIsProcessing(true);
     try {
       const response = await supabase.functions.invoke('paystack', {
         body: { 
@@ -142,63 +124,27 @@ const WalletPage = () => {
         },
       });
 
-      if (response.data?.status && response.data?.data) {
+      if (response.data.status) {
         // Create a pending transaction record
         await supabase.from('transactions').insert({
           user_id: user.id,
-          amount: depositAmount / nairaRate,
+          amount: depositAmount / nairaRate, // Convert to coins
           transaction_type: 'deposit',
           status: 'pending',
           payment_reference: response.data.data.reference
         });
-
-        // Load Paystack inline script if not already loaded
-        if (!(window as any).PaystackPop) {
-          const script = document.createElement('script');
-          script.src = 'https://js.paystack.co/v1/inline.js';
-          document.body.appendChild(script);
-          await new Promise((resolve) => script.onload = resolve);
-        }
-
-        // Initialize Paystack inline checkout
-        const handler = (window as any).PaystackPop.setup({
-          key: response.data.data.access_code ? undefined : 'pk_test_' + response.data.data.reference.slice(0, 10),
-          email: user.email,
-          amount: depositAmount * 100,
-          ref: response.data.data.reference,
-          onClose: function() {
-            setIsProcessing(false);
-            setIsDepositOpen(false);
-            toast({
-              title: 'Cancelled',
-              description: 'Payment was cancelled',
-              variant: 'destructive',
-            });
-          },
-          callback: function(response: any) {
-            setIsProcessing(false);
-            setIsDepositOpen(false);
-            setAmount('');
-            toast({
-              title: 'Success',
-              description: 'Payment successful! Your wallet will be updated shortly.',
-            });
-            refetch();
-          }
-        });
-
-        handler.openIframe();
+        
+        // Redirect to Paystack checkout
+        window.location.href = response.data.data.authorization_url;
       } else {
         throw new Error('Failed to initialize payment');
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to process deposit',
+        description: error.message,
         variant: 'destructive',
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -373,7 +319,7 @@ const WalletPage = () => {
                         placeholder={`Minimum: ₦${(transactionType === 'deposit' ? minDeposit : minWithdrawal).toLocaleString()}`}
                       />
                       <Button 
-                        onClick={transactionType === 'deposit' ? handleDepositClick : () => setIsWithdrawalOpen(true)}
+                        onClick={transactionType === 'deposit' ? handleDeposit : () => setIsWithdrawalOpen(true)}
                       >
                         {transactionType === 'deposit' ? 'Deposit' : 'Withdraw'}
                       </Button>
@@ -394,57 +340,6 @@ const WalletPage = () => {
 
         <HolocoinInfo />
       </div>
-
-      <Dialog open={isDepositOpen} onOpenChange={setIsDepositOpen}>
-        <DialogContent className="bg-chess-dark border-chess-brown text-white">
-          <DialogHeader>
-            <DialogTitle>Deposit Funds</DialogTitle>
-            <DialogDescription>
-              Confirm your deposit of ₦{Number(amount).toLocaleString() || '0'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleDepositConfirm} className="space-y-4">
-            <div className="space-y-2">
-              <div className="p-4 bg-chess-brown/20 rounded-lg border border-chess-brown/50">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-400">Amount</span>
-                  <span className="text-lg font-bold">₦{Number(amount).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-400">You'll receive</span>
-                  <span className="text-lg font-bold text-chess-accent">
-                    {(Number(amount) / nairaRate).toFixed(2)} HC̸
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-sm text-gray-400 space-y-1">
-              <p>• Secure payment via Paystack</p>
-              <p>• Funds reflect instantly after payment</p>
-              <p>• You'll be redirected to complete payment</p>
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsDepositOpen(false)}
-                disabled={isProcessing}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isWithdrawalOpen} onOpenChange={setIsWithdrawalOpen}>
         <DialogContent className="bg-chess-dark border-chess-brown text-white">
