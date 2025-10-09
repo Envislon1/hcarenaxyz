@@ -8,6 +8,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MatchCardProps {
   match: Match;
@@ -19,7 +21,9 @@ interface MatchCardProps {
 export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails = true }: MatchCardProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [showFeeWarning, setShowFeeWarning] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   
   const isUserInMatch = user && (match.whitePlayerId === user.id || match.blackPlayerId === user.id);
   const userIsWinner = user && match.winner === user.id;
@@ -57,6 +61,50 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
 
   const calculateFee = (stake: number) => {
     return Math.ceil(stake * 0.01); // 1% fee
+  };
+
+  const handleCancelMatch = async () => {
+    if (!user) return;
+    
+    setIsCancelling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to cancel a match",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await supabase.functions.invoke('cancel-game', {
+        body: { gameId: match.id },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      toast({
+        title: "Match Cancelled",
+        description: "Your match has been cancelled and funds refunded",
+      });
+      
+      // Refresh the page or update the list
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel match",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   return (
@@ -136,11 +184,16 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
           
           {match.status === 'pending' && isUserInMatch && (
             <div className="w-full space-y-2">
-              <Button disabled variant="outline" className="w-full">
-                Waiting for opponent
+              <Button 
+                onClick={handleCancelMatch}
+                disabled={isCancelling}
+                variant="destructive"
+                className="w-full"
+              >
+                {isCancelling ? "Cancelling..." : "Cancel Match"}
               </Button>
               <Button 
-                onClick={() => window.location.href = `/game/${match.id}`}
+                onClick={() => navigate(`/game/${match.id}`)}
                 variant="secondary"
                 className="w-full"
               >
@@ -151,7 +204,7 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
           
           {match.status === 'active' && isUserInMatch && (
             <Button 
-              onClick={() => window.location.href = `/game/${match.id}`}
+              onClick={() => navigate(`/game/${match.id}`)}
               className="w-full bg-chess-accent hover:bg-chess-accent/80 text-black"
             >
               Join Game
