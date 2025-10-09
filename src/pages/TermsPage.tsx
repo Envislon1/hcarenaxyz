@@ -1,8 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const TermsPage = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
+      <Button
+        variant="ghost"
+        onClick={() => navigate(-1)}
+        className="mb-4"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold text-chess-accent">Terms of Service</h1>
         <p className="text-gray-400">Last updated: {new Date().toLocaleDateString()}</p>

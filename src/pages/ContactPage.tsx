@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, MessageSquare, HelpCircle } from "lucide-react";
+import { Mail, MessageSquare, HelpCircle, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const ContactPage = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -31,6 +33,14 @@ const ContactPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
+      <Button
+        variant="ghost"
+        onClick={() => navigate(-1)}
+        className="mb-4"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold text-chess-accent">Contact Us</h1>
         <p className="text-xl text-gray-300">
@@ -41,7 +51,7 @@ const ContactPage = () => {
       <div className="grid md:grid-cols-3 gap-6">
         <Card 
           className="border-chess-brown/50 bg-chess-dark/90 cursor-pointer hover:border-chess-accent/50 transition-colors"
-          onClick={() => window.location.href = 'mailto:support@hcarena.com'}
+          onClick={() => window.location.href = 'mailto:support@hcarena.xyz'}
         >
           <CardHeader className="text-center">
             <Mail className="w-12 h-12 mx-auto mb-2 text-chess-accent" />
@@ -49,7 +59,7 @@ const ContactPage = () => {
           </CardHeader>
           <CardContent className="text-center text-gray-300">
             <p className="text-sm">Get help via email</p>
-            <p className="text-chess-accent mt-2">support@hcarena.com</p>
+            <p className="text-chess-accent mt-2">support@hcarena.xyz</p>
           </CardContent>
         </Card>
 
