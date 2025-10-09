@@ -84,9 +84,8 @@ const findKingMultiJumpPaths = (
   const [dirX, dirY] = direction;
   
   let distance = 1;
-  let gapCount = 0;
   
-  // Scan along the direction to find enemy pieces with gaps (minimum 1 gap required)
+  // Scan along the direction to find enemy pieces
   while (distance < 8) {
     const scanIndex = coordinatesToIndex(x + dirX * distance, y + dirY * distance);
     if (scanIndex === undefined) break;
@@ -95,15 +94,8 @@ const findKingMultiJumpPaths = (
     
     if (piece) {
       if (piece.player !== player && !visited.has(scanIndex)) {
-        // Found an enemy piece - check if we have at least 1 gap before this enemy
-        if (gapCount < 1) {
-          // Not enough gap before this enemy - stop searching in this direction
-          break;
-        }
-        
-        // Check all possible landing positions after this enemy (need at least 1 gap after enemy too)
+        // Found an enemy piece - check all possible landing positions after it
         let landDistance = distance + 1;
-        let landGapCount = 0;
         
         while (landDistance < 8) {
           const landIndex = coordinatesToIndex(x + dirX * landDistance, y + dirY * landDistance);
@@ -111,30 +103,25 @@ const findKingMultiJumpPaths = (
           
           const landPiece = state.tiles[landIndex];
           if (!landPiece) {
-            landGapCount++;
+            // Can land here - add as a valid destination
+            paths.push([landIndex]);
             
-            // Need at least 1 gap after the enemy before we can land
-            if (landGapCount >= 1) {
-              // Can land here - add as a valid destination
-              paths.push([landIndex]);
-              
-              // Also check for further jumps from this position in ALL directions
-              const tempState: GameState = JSON.parse(JSON.stringify(state));
-              tempState.tiles[landIndex] = tempState.tiles[index];
-              tempState.tiles[index] = null;
-              tempState.tiles[scanIndex] = null;
-              
-              const newVisited = new Set(visited);
-              newVisited.add(scanIndex);
-              
-              // Check all four diagonal directions for further jumps
-              const allDirections = captureDirections();
-              for (const newDir of allDirections) {
-                const furtherPaths = findKingMultiJumpPaths(landIndex, player, tempState, newDir, newVisited);
-                furtherPaths.forEach((path) => {
-                  paths.push([landIndex, ...path]);
-                });
-              }
+            // Also check for further jumps from this position in ALL directions
+            const tempState: GameState = JSON.parse(JSON.stringify(state));
+            tempState.tiles[landIndex] = tempState.tiles[index];
+            tempState.tiles[index] = null;
+            tempState.tiles[scanIndex] = null;
+            
+            const newVisited = new Set(visited);
+            newVisited.add(scanIndex);
+            
+            // Check all four diagonal directions for further jumps
+            const allDirections = captureDirections();
+            for (const newDir of allDirections) {
+              const furtherPaths = findKingMultiJumpPaths(landIndex, player, tempState, newDir, newVisited);
+              furtherPaths.forEach((path) => {
+                paths.push([landIndex, ...path]);
+              });
             }
             
             landDistance++;
@@ -144,18 +131,16 @@ const findKingMultiJumpPaths = (
           }
         }
         
-        // After processing this enemy, stop - we don't continue past it in this scan
+        // After processing this enemy, stop
         break;
       } else {
         // Found own piece or visited enemy - stop
         break;
       }
     } else {
-      // Empty square - count as gap
-      gapCount++;
+      // Empty square - continue scanning
+      distance++;
     }
-    
-    distance++;
   }
   
   return paths;
@@ -351,8 +336,6 @@ const findKingPathToDestination = (
   const [dirX, dirY] = direction;
   
   let distance = 1;
-  let foundEnemy = false;
-  let gapCount = 0;
   
   while (distance < 8) {
     const scanIndex = coordinatesToIndex(x + dirX * distance, y + dirY * distance);
@@ -362,45 +345,62 @@ const findKingPathToDestination = (
     
     if (piece) {
       if (piece.player !== player && !visited.has(scanIndex)) {
-        if (foundEnemy && gapCount === 0) break;
+        // Found an enemy piece - check all possible landing positions after it
+        let landDistance = distance + 1;
         
-        foundEnemy = true;
-        gapCount = 0;
-        
-        const landIndex = coordinatesToIndex(x + dirX * (distance + 1), y + dirY * (distance + 1));
-        if (landIndex !== undefined && !state.tiles[landIndex]) {
-          if (landIndex === toIndex) {
-            return { path: [...currentPath, landIndex], captured: [...Array.from(visited), scanIndex] };
+        while (landDistance < 8) {
+          const landIndex = coordinatesToIndex(x + dirX * landDistance, y + dirY * landDistance);
+          if (landIndex === undefined) break;
+          
+          const landPiece = state.tiles[landIndex];
+          if (!landPiece) {
+            // Can land here
+            if (landIndex === toIndex) {
+              return { path: [...currentPath, landIndex], captured: [...Array.from(visited), scanIndex] };
+            }
+            
+            // Try to continue from this landing position
+            const tempState: GameState = JSON.parse(JSON.stringify(state));
+            tempState.tiles[landIndex] = tempState.tiles[fromIndex];
+            tempState.tiles[fromIndex] = null;
+            tempState.tiles[scanIndex] = null;
+            
+            const newVisited = new Set(visited);
+            newVisited.add(scanIndex);
+            
+            // Try all four diagonal directions for further jumps
+            const allDirections = captureDirections();
+            for (const newDir of allDirections) {
+              const result = findKingPathToDestination(
+                landIndex,
+                toIndex,
+                player,
+                tempState,
+                newDir,
+                [...currentPath, landIndex],
+                newVisited
+              );
+              
+              if (result) return result;
+            }
+            
+            landDistance++;
+          } else {
+            // Blocked by another piece
+            break;
           }
-          
-          const tempState: GameState = JSON.parse(JSON.stringify(state));
-          tempState.tiles[landIndex] = tempState.tiles[fromIndex];
-          tempState.tiles[fromIndex] = null;
-          tempState.tiles[scanIndex] = null;
-          
-          const newVisited = new Set(visited);
-          newVisited.add(scanIndex);
-          
-          const result = findKingPathToDestination(
-            landIndex,
-            toIndex,
-            player,
-            tempState,
-            direction,
-            [...currentPath, landIndex],
-            newVisited
-          );
-          
-          if (result) return result;
         }
+        
+        // After processing this enemy, stop
+        break;
       } else {
+        // Found own piece or visited enemy - stop
         break;
       }
     } else {
-      if (foundEnemy) gapCount++;
+      // Empty square - continue scanning
+      distance++;
     }
-    
-    distance++;
   }
   
   return null;

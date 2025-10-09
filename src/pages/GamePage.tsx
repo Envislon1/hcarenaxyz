@@ -168,7 +168,10 @@ const GamePage = () => {
             title: "Rematch Accepted!",
             description: "Opening new game...",
           });
-          setTimeout(() => navigate(`/game/${offer.new_game_id}`), 500);
+          // Navigate to new game, replacing current history entry
+          setTimeout(() => {
+            navigate(`/game/${offer.new_game_id}`, { replace: true });
+          }, 100);
         }
       }
     });
@@ -518,7 +521,10 @@ const GamePage = () => {
             title: "Rematch Started!",
             description: "Opening new game...",
           });
-          navigate(`/game/${result.gameId}`);
+          // Navigate to new game, replacing current history entry
+          setTimeout(() => {
+            navigate(`/game/${result.gameId}`, { replace: true });
+          }, 100);
         }
       } catch (error) {
         console.error('Rematch accept error:', error);
