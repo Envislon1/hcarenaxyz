@@ -42,7 +42,7 @@ export const Footer = () => {
         
         <div className="mt-8 border-t border-gray-800 pt-6 text-center text-gray-500 text-sm">
           <p>© {new Date().getFullYear()} HC̸Arena. All rights reserved.</p>
-          <p className="mt-1">Powered by Holocoin.</p>
+          <p className="mt-1">Powered by Gracergy.</p>
         </div>
       </div>
     </footer>
