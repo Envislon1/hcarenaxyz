@@ -14,6 +14,8 @@ import { gameService } from "@/services/gameService";
 import { GameMatchingDialog } from "@/components/GameMatchingDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { MatchStatusLegend } from "@/components/MatchStatusLegend";
+import { useActiveGameRedirect } from "@/hooks/useActiveGameRedirect";
 
 
 const stakeOptions = [
@@ -37,6 +39,9 @@ const CreateMatchPage = () => {
   const [timeLimit, setTimeLimit] = useState<number>(300); // 5 minutes in seconds
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [isMatching, setIsMatching] = useState<boolean>(false);
+  
+  // Redirect to active game if one exists
+  useActiveGameRedirect();
 
   // Check for active games
   const { data: activeGame } = useQuery({
@@ -77,7 +82,7 @@ const CreateMatchPage = () => {
   });
 
   const requiredBalance = gameType === "checkers" 
-    ? stake * 12 * 1.05 // 12 pieces, 5% fee (e.g., 1 stake = 12.6 total)
+    ? stake * 12 * 1.074 // 12 pieces, 7.4% fee
     : stake;
 
   if (!user) {
@@ -181,8 +186,8 @@ const CreateMatchPage = () => {
           throw new Error(errorMessage);
         }
 
-        // Calculate holo fee (5% of total pot - both players' stakes)
-        const platformFee = stake * 24 * 0.05;
+        // Calculate holo fee (7.4% of total pot - both players' stakes)
+        const platformFee = stake * 24 * 0.074;
         
         const { data: newGame, error: createError } = await supabase
           .from('games')
@@ -238,11 +243,14 @@ const CreateMatchPage = () => {
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
+      {/* Match Status Legend */}
+      <MatchStatusLegend />
+
       <Card className="border-chess-brown/50 bg-chess-dark/90">
         <CardHeader>
           <CardTitle className="text-2xl">Create a Match</CardTitle>
           <CardDescription>
-            Set up a checkers match with holocoin stakes
+            Set up a game match with holocoin stakes
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -264,7 +272,7 @@ const CreateMatchPage = () => {
             </Select>
             {gameType === "checkers" && (
               <p className="text-xs text-muted-foreground">
-                Required balance: {requiredBalance.toFixed(1)} holocoins (includes 5% HC̸ fee)
+                Required balance: {requiredBalance.toFixed(1)} holocoins (includes 7.4% HC̸ fee)
               </p>
             )}
           </div>
@@ -300,14 +308,14 @@ const CreateMatchPage = () => {
             </div>
             <div className="flex justify-between text-sm">
               <span>Holo fee:</span>
-              <span className="font-bold">HC̸{(stake * 12 * 0.05).toFixed(1)}</span>
+              <span className="font-bold">HC̸{(stake * 12 * 0.074).toFixed(1)}</span>
             </div>
             <div className="flex justify-between text-sm border-t border-chess-brown/30 pt-2 mt-2">
               <span className="font-semibold">Total deduction:</span>
               <span className="font-bold text-chess-accent">HC̸{requiredBalance.toFixed(1)}</span>
             </div>
             <div className="text-xs text-muted-foreground pt-2 border-t border-chess-brown/30">
-              1 Holocoin = ₦612 Nigerian Naira
+              1 Holocoin = ₦306 Nigerian Naira
             </div>
           </div>
         </CardContent>

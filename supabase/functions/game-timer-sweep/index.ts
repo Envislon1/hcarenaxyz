@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
         const winnerId = isPlayer1Turn ? game.player2_id : game.player1_id;
         const currentPlayerId = isPlayer1Turn ? game.player1_id : game.player2_id;
 
-        const platformFee = game.stake_amount * 24 * 0.05;
+        const platformFee = game.stake_amount * 24 * 0.074;
 
         const { error: completeError } = await supabase
           .from('games')

@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
         ? game.player2_id 
         : game.player1_id;
 
-      // Calculate holo fee (5% of total pot)
-      const platformFee = game.stake_amount * 24 * 0.05;
+      // Calculate holo fee (7.4% of total pot)
+      const platformFee = game.stake_amount * 24 * 0.074;
 
       // Update game as completed with winner and holo fee
       const { error: completeError } = await supabase

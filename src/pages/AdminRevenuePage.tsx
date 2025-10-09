@@ -75,10 +75,10 @@ const AdminRevenuePage = () => {
   // Calculate total platform balance (sum of all user wallets)
   const totalPlatformBalance = walletsData?.reduce((sum, profile) => sum + Number(profile.wallet_balance), 0) || 0;
 
-  // Calculate revenue from completed games only (5% of stake)
+  // Calculate revenue from completed games only (7.4% of stake)
   const completedRevenue = revenueData
     ?.filter(game => game.status === 'completed')
-    ?.reduce((sum, game) => sum + (Number(game.stake_amount) * 24 * 0.05), 0) || 0;
+    ?.reduce((sum, game) => sum + (Number(game.stake_amount) * 24 * 0.074), 0) || 0;
 
   const totalGames = revenueData?.length || 0;
   const completedGames = revenueData?.filter(game => game.status === 'completed').length || 0;
@@ -108,14 +108,14 @@ const AdminRevenuePage = () => {
       
       if (error) {
         console.error("Error fetching conversion rate:", error);
-        return { naira_per_holocoin: 612 };
+        return { naira_per_holocoin: 306 };
       }
       
       return data?.setting_value as { naira_per_holocoin: number };
     }
   });
 
-  const nairaRate = conversionRate?.naira_per_holocoin || 612;
+  const nairaRate = conversionRate?.naira_per_holocoin || 306;
 
   // Fetch admin emails
   const { data: adminEmails } = useQuery({

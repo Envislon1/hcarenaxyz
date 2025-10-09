@@ -31,8 +31,8 @@ Deno.serve(async (req) => {
 
     const loserId = game.player1_id === winnerId ? game.player2_id : game.player1_id;
 
-    // Calculate holo fee if not set (5% of total pot)
-    const platformFee = game.platform_fee || (game.stake_amount * 24 * 0.05);
+    // Calculate holo fee if not set (7.4% of total pot)
+    const platformFee = game.platform_fee || (game.stake_amount * 24 * 0.074);
 
     // Delete chat messages for this game
     const { error: chatDeleteError } = await supabase

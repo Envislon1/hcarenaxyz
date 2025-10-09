@@ -87,7 +87,7 @@ serve(async (req) => {
         .eq('setting_key', 'currency_conversion')
         .single()
 
-      const conversionRate = settings?.setting_value?.naira_per_holocoin || 100
+      const conversionRate = settings?.setting_value?.naira_per_holocoin || 306
       const holocoins = amount / conversionRate
 
       // Update transaction status

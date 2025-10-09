@@ -168,13 +168,13 @@ const ContactPage = () => {
           <div>
             <h3 className="font-semibold text-white mb-2 text-lg">How are winners determined?</h3>
             <p className="text-sm">
-              In checkers, you win by capturing all opponent pieces or when they have no legal moves. You can also win if your opponent's timer runs out.
+              You win by capturing all opponent pieces or when they have no legal moves. You can also win if your opponent's timer runs out.
             </p>
           </div>
           <div>
             <h3 className="font-semibold text-white mb-2 text-lg">What is the Holo fee?</h3>
             <p className="text-sm">
-              A 5% platform fee (HC̸ fee) is charged on each match to maintain the platform and provide support.
+              A 7.4% platform fee (HC̸ fee) is charged on each match to maintain the platform and provide support.
             </p>
           </div>
           <div>

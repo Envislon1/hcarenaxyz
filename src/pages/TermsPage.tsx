@@ -51,7 +51,7 @@ const TermsPage = () => {
           </p>
           <ul className="list-disc list-inside space-y-1 ml-4">
             <li>You agree to the deduction of the stake amount from your wallet before the match begins</li>
-            <li>A platform fee (5% of the stake) is charged on each match</li>
+            <li>A platform fee (7.4% of the stake) is charged on each match</li>
             <li>Winners receive the pot minus the platform fee</li>
             <li>All transactions are final and non-refundable once a match begins</li>
           </ul>
@@ -84,7 +84,7 @@ const TermsPage = () => {
         </CardHeader>
         <CardContent className="space-y-3 text-gray-300">
           <p>
-            All games follow standard checkers rules:
+            All games follow standard game rules:
           </p>
           <ul className="list-disc list-inside space-y-1 ml-4">
             <li>Players must make valid moves according to game rules</li>

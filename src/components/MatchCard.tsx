@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MatchCardProps {
   match: Match;
@@ -22,6 +23,7 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showFeeWarning, setShowFeeWarning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   
@@ -94,8 +96,9 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
         description: "Your match has been cancelled and funds refunded",
       });
       
-      // Navigate to matches page to refresh the list
-      navigate('/matches');
+      // Invalidate queries to refresh the list immediately
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({ queryKey: ["userMatches"] });
     } catch (error: any) {
       toast({
         title: "Error",

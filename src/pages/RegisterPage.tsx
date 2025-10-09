@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { HolocoinIcon } from "@/components/HolocoinIcon";
 
 export const RegisterPage = () => {
   const [username, setUsername] = useState("");
@@ -69,9 +70,13 @@ export const RegisterPage = () => {
     <div className="flex items-center justify-center min-h-[70vh]">
       <Card className="w-full max-w-md border-chess-brown/50 bg-chess-dark/90">
         <CardHeader className="space-y-1">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <HolocoinIcon size={48} />
+            <span className="text-3xl text-chess-accent font-bold">Arena</span>
+          </div>
           <CardTitle className="text-2xl text-center">Create an Account</CardTitle>
           <CardDescription className="text-center">
-            Enter your details to create a new Chess<span className="text-chess-accent">Stake</span> account
+            Enter your details to create a new HC<span className="text-chess-accent">Arena</span> account
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

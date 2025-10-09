@@ -92,7 +92,7 @@ export const gameService = {
   },
 
   // Make a move
-  makeMove: async (gameId: string, playerId: string, move: GameMove, moveNumber: number, newBoardState: any[], previousBoardState: any[]) => {
+  makeMove: async (gameId: string, playerId: string, move: GameMove, moveNumber: number, newBoardState: any[], previousBoardState: any[], capturedCount: number = 0) => {
     try {
       // Calculate from and to indices from notation
       const fromIndex = notationToIndex(move.from);
@@ -113,14 +113,43 @@ export const gameService = {
 
       if (logError) console.error("Move logging error:", logError);
 
-      // Update game board state, turn, and timer_last_updated to prevent timer reset
+      // Get current game to determine which player's capture count to update
+      const { data: gameData } = await supabase
+        .from('games')
+        .select('player1_id, player2_id, player1_captures, player2_captures')
+        .eq('id', gameId)
+        .single();
+
+      // Calculate new capture counts
+      let updateData: any = {
+        board_state: newBoardState,
+        current_turn: moveNumber + 1,
+        timer_last_updated: new Date().toISOString()
+      };
+
+      if (gameData && capturedCount > 0) {
+        console.log('Updating capture count:', {
+          playerId,
+          capturedCount,
+          player1_id: gameData.player1_id,
+          player2_id: gameData.player2_id,
+          current_player1_captures: gameData.player1_captures,
+          current_player2_captures: gameData.player2_captures
+        });
+        
+        if (playerId === gameData.player1_id) {
+          updateData.player1_captures = (gameData.player1_captures || 0) + capturedCount;
+          console.log('Player 1 new captures:', updateData.player1_captures);
+        } else if (playerId === gameData.player2_id) {
+          updateData.player2_captures = (gameData.player2_captures || 0) + capturedCount;
+          console.log('Player 2 new captures:', updateData.player2_captures);
+        }
+      }
+
+      // Update game board state, turn, timer, and capture counts
       const { error: updateError } = await supabase
         .from('games')
-        .update({
-          board_state: newBoardState,
-          current_turn: moveNumber + 1,
-          timer_last_updated: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', gameId);
 
       if (updateError) throw updateError;

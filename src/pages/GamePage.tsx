@@ -17,6 +17,7 @@ import {
 import { GameChat } from "@/components/GameChat";
 import { useGamePresence } from "@/hooks/useGamePresence";
 import { useNotifications } from "@/context/NotificationContext";
+import { CapturedPieces } from "@/components/CapturedPieces";
 
 interface GameState {
   id: string;
@@ -30,6 +31,8 @@ interface GameState {
   game_type: string;
   stake_amount: number;
   winner_id: string | null;
+  player1_captures: number;
+  player2_captures: number;
 }
 
 const GamePage = () => {
@@ -453,6 +456,9 @@ const GamePage = () => {
 
         const { newState, capturedPieces } = moveResult;
 
+        // Debug: Log captured pieces
+        console.log('Captured pieces in this move:', capturedPieces, 'Count:', capturedPieces.length);
+
         // Check for game over
         const gameOverCheck = checkGameOver(newState);
         if (gameOverCheck.isOver && gameOverCheck.winner) {
@@ -473,7 +479,8 @@ const GamePage = () => {
           },
           moveCount + 1,
           newState.tiles,
-          boardState
+          boardState,
+          capturedPieces.length
         );
         
         // Play move sound effect
@@ -761,6 +768,16 @@ const GamePage = () => {
               Stake Per Piece: {game.stake_amount.toFixed(1)} HC
             </div>
           </Card>
+
+          {game.status === 'active' && (
+            <CapturedPieces
+              player1Captures={game.player1_captures || 0}
+              player2Captures={game.player2_captures || 0}
+              player1Username={player1Username}
+              player2Username={player2Username}
+              isPlayer1={isPlayer1}
+            />
+          )}
         </div>
 
         {/* Game Board - Desktop */}

@@ -8,6 +8,7 @@ import { MatchCard } from "@/components/MatchCard";
 import { PracticeBoard } from "@/components/PracticeBoard";
 import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
+import { useActiveGameRedirect } from "@/hooks/useActiveGameRedirect";
 
 const DownloadButton = ({ platform }: { platform: 'windows' | 'android' }) => {
   const { data: files } = useQuery({
@@ -51,9 +52,10 @@ const DownloadButton = ({ platform }: { platform: 'windows' | 'android' }) => {
   );
 };
 export const HomePage = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  
+  // Redirect to active game if one exists
+  useActiveGameRedirect();
 
   // Query for getting real matches from database for authenticated users
   const {
@@ -116,7 +118,7 @@ export const HomePage = () => {
             Stake with <span className="text-chess-accent">HC̸ Coins</span>
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Play Checkers and Win Holocoins!
+            Play Games and Win Holocoins!
           </p>
           
           {!user ? <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
@@ -166,7 +168,7 @@ export const HomePage = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400">
-                  Choose your stake: 1, 2, 5, or 10 holocoins per piece captured.
+                  Choose your stake: 1, 2, 5, or 10 holocoins per piece.
                 </p>
               </CardContent>
             </Card>
@@ -180,8 +182,8 @@ export const HomePage = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400">
-                  In checkers, each captured piece = stake × holocoins. 
-                  With 12 pieces per player, maximum stake of 63 holocoins required (includes 5% HC̸ fee).
+                  Each captured piece = stake × holocoins. 
+                  With 12 pieces per player, maximum stake of 63 holocoins required (includes 7.4% HC̸ fee).
                 </p>
               </CardContent>
             </Card>
@@ -196,7 +198,7 @@ export const HomePage = () => {
               <CardContent>
                 <p className="text-gray-400">
                   Winners earn holocoins based on pieces captured.
-                  Withdraw anytime: 1 Holocoin = ₦612 Nigerian Naira.
+                  Withdraw anytime: 1 Holocoin = ₦306 Nigerian Naira.
                 </p>
               </CardContent>
             </Card>
@@ -229,7 +231,7 @@ export const HomePage = () => {
             </div>
             <div className="text-center space-y-4">
               <p className="text-gray-400">
-                <span className="text-chess-accent font-bold">1 Holocoin = ₦612</span>
+                <span className="text-chess-accent font-bold">1 Holocoin = ₦306</span>
               </p>
               <Link to="/login">
                 <Button size="lg" className="bg-chess-accent hover:bg-chess-accent/80 text-black">

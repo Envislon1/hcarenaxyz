@@ -46,8 +46,8 @@ Deno.serve(async (req) => {
     // Determine winner (opponent of resigning player)
     const winnerId = user.id === game.player1_id ? game.player2_id : game.player1_id;
 
-    // Calculate holo fee (5% of total pot)
-    const platformFee = game.platform_fee || (game.stake_amount * 24 * 0.05);
+    // Calculate holo fee (7.4% of total pot)
+    const platformFee = game.platform_fee || (game.stake_amount * 24 * 0.074);
 
     // Delete chat messages for this game
     const { error: chatDeleteError } = await supabase

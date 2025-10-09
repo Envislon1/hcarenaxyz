@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { HolocoinIcon } from "@/components/HolocoinIcon";
 
 export const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -33,6 +35,24 @@ export const LoginPage = () => {
     
     try {
       await login(email, password);
+      
+      // Check for active game after login
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user?.id) {
+        const { data: activeGame } = await supabase
+          .from('games')
+          .select('*')
+          .or(`player1_id.eq.${session.session.user.id},player2_id.eq.${session.session.user.id}`)
+          .eq('status', 'active')
+          .limit(1)
+          .maybeSingle();
+          
+        if (activeGame) {
+          navigate(`/game/${activeGame.id}`);
+          return;
+        }
+      }
+      
       navigate("/");
     } catch (error) {
       console.error("Login failed:", error);
@@ -50,7 +70,11 @@ export const LoginPage = () => {
     <div className="flex items-center justify-center min-h-[70vh]">
       <Card className="w-full max-w-md border-chess-brown/50 bg-chess-dark/90">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Login to Holo<span className="text-chess-accent">coin</span></CardTitle>
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <HolocoinIcon size={48} />
+            <span className="text-3xl text-chess-accent font-bold">Arena</span>
+          </div>
+          <CardTitle className="text-2xl text-center">Login to Your Account</CardTitle>
           <CardDescription className="text-center">
             Enter your email and password to sign in to your account
           </CardDescription>

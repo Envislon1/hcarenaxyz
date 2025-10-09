@@ -11,20 +11,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { Plus, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { useActiveGameRedirect } from "@/hooks/useActiveGameRedirect";
 
 const MatchesPage = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Redirect to active game if one exists
+  useActiveGameRedirect();
 
   const { data: matches = [], isLoading } = useQuery({
-    queryKey: ["matches"],
+    queryKey: ["matches", user?.id],
     queryFn: async () => {
+      // For pending matches, only show user's own pending games (where they are player1)
+      // For other statuses, show all matches
       const { data, error } = await supabase
         .from('games')
         .select(`
@@ -40,7 +49,14 @@ const MatchesPage = () => {
         return [] as Match[];
       }
 
-      return (data || []).map((game: any) => ({
+      return (data || []).filter((game: any) => {
+        // For pending matches (status = 'waiting'), only show if user is player1
+        if (game.status === 'waiting' && user) {
+          return game.player1_id === user.id;
+        }
+        // Show all other matches
+        return true;
+      }).map((game: any) => ({
         id: game.id,
         whitePlayerId: game.player1_id,
         blackPlayerId: game.player2_id || '',
@@ -121,8 +137,67 @@ const MatchesPage = () => {
     setIsDetailsOpen(true);
   };
 
-  const handleJoinMatch = (match: Match) => {
-    navigate(`/game/${match.id}`);
+  const handleJoinMatch = async (match: Match) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to join a match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Calculate required balance
+    const requiredBalance = match.stake * 12 * 1.074; // 12 pieces + 7.4% fee
+
+    if (requiredBalance > user.balance) {
+      toast({
+        title: "Insufficient balance",
+        description: `You need ${requiredBalance.toFixed(1)} holocoins to join this match`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Call matchmaking edge function to join the game
+      const { data, error } = await supabase.functions.invoke('matchmaking', {
+        body: {
+          gameType: match.gameMode,
+          stake: match.stake,
+          timeLimit: parseInt(match.timeControl) * 60, // Convert minutes to seconds
+          userId: user.id,
+          totalStakeAmount: requiredBalance
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.matched && data.gameId) {
+        toast({
+          title: "Joined match!",
+          description: "Starting game...",
+        });
+        
+        // Small delay to ensure database is updated
+        setTimeout(() => {
+          navigate(`/game/${data.gameId}`);
+        }, 500);
+      } else {
+        toast({
+          title: "Match no longer available",
+          description: "This match may have been filled by another player.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to join match:", error);
+      toast({
+        title: "Error",
+        description: "Failed to join match. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCreateMatch = () => {

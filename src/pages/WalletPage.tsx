@@ -75,14 +75,14 @@ const WalletPage = () => {
       
       if (error) {
         console.error("Error fetching conversion rate:", error);
-        return { naira_per_holocoin: 612, platform_fee_percentage: 5 };
+        return { naira_per_holocoin: 306, platform_fee_percentage: 7.4 };
       }
       
       return data?.setting_value as { naira_per_holocoin: number; platform_fee_percentage: number };
     }
   });
 
-  const nairaRate = conversionRate?.naira_per_holocoin || 612;
+  const nairaRate = conversionRate?.naira_per_holocoin || 306;
   const minDeposit = 5000;
   const minWithdrawal = 5000;
 

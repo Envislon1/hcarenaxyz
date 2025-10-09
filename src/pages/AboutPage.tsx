@@ -10,7 +10,7 @@ const AboutPage = () => {
           <h1 className="text-4xl font-bold text-chess-accent">About HC Arena</h1>
         </div>
         <p className="text-xl text-gray-300">
-          The premier platform for competitive checkers with real stakes
+          The premier platform for competitive games with real stakes
         </p>
       </div>
 
@@ -20,7 +20,7 @@ const AboutPage = () => {
         </CardHeader>
         <CardContent className="space-y-4 text-gray-300">
           <p>
-            HC Arena is revolutionizing online board gaming by combining the classic strategy of checkers 
+            HC Arena is revolutionizing online board gaming by combining classic strategy games 
             with the excitement of competitive play and real stakes. We believe that skill should be rewarded, 
             and every move should matter.
           </p>
@@ -48,7 +48,7 @@ const AboutPage = () => {
             </div>
             <div>
               <h3 className="font-semibold text-white mb-2">3. Play & Win</h3>
-              <p>Compete in strategic checkers matches. Winners take the pot, minus a small platform fee.</p>
+              <p>Compete in strategic game matches. Winners take the pot, minus a small platform fee.</p>
             </div>
             <div>
               <h3 className="font-semibold text-white mb-2">4. Track Your Progress</h3>
@@ -81,7 +81,7 @@ const AboutPage = () => {
         <CardContent className="space-y-4 text-gray-300">
           <p>
             HC Arena is more than just a gaming platform—it's a community of strategists, competitors, 
-            and checkers enthusiasts. Join thousands of players worldwide who are already competing for glory 
+            and gaming enthusiasts. Join thousands of players worldwide who are already competing for glory 
             and coins.
           </p>
           <p className="text-chess-accent font-semibold">

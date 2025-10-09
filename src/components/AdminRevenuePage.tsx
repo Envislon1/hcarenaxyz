@@ -49,10 +49,10 @@ const AdminRevenuePage = () => {
   // Calculate total platform balance (sum of all user wallets)
   const totalPlatformBalance = walletsData?.reduce((sum, profile) => sum + Number(profile.wallet_balance), 0) || 0;
 
-  // Calculate revenue from completed games only (5% of stake)
+  // Calculate revenue from completed games only (7.4% of stake)
   const completedRevenue = revenueData
     ?.filter(game => game.status === 'completed')
-    ?.reduce((sum, game) => sum + (Number(game.stake_amount) * 24 * 0.05), 0) || 0;
+    ?.reduce((sum, game) => sum + (Number(game.stake_amount) * 24 * 0.074), 0) || 0;
 
   // Calculate total games created
   const totalGames = revenueData?.length || 0;
@@ -133,7 +133,7 @@ const AdminRevenuePage = () => {
                 {revenueData?.map((game) => {
                   // Calculate holo fee based on status
                   const platformFee = game.status === 'completed' 
-                    ? Number(game.stake_amount) * 24 * 0.05 
+                    ? Number(game.stake_amount) * 24 * 0.074 
                     : 0;
                   
                   return (
