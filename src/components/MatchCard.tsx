@@ -94,8 +94,8 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
         description: "Your match has been cancelled and funds refunded",
       });
       
-      // Refresh the page or update the list
-      window.location.reload();
+      // Navigate to matches page to refresh the list
+      navigate('/matches');
     } catch (error: any) {
       toast({
         title: "Error",
