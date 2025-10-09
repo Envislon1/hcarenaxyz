@@ -1,4 +1,5 @@
 import { HolocoinIcon } from "@/components/HolocoinIcon";
+import { Link } from "react-router-dom";
 
 export const Footer = () => {
   return (
@@ -12,30 +13,30 @@ export const Footer = () => {
           </div>
           
           <div className="flex flex-col md:flex-row md:space-x-8">
-            <a 
-              href="/about"
+            <Link 
+              to="/about"
               className="text-gray-400 hover:text-chess-accent mb-2 md:mb-0"
             >
               About
-            </a>
-            <a 
-              href="/terms"
+            </Link>
+            <Link 
+              to="/terms"
               className="text-gray-400 hover:text-chess-accent mb-2 md:mb-0"
             >
               Terms of Service
-            </a>
-            <a 
-              href="/privacy"
+            </Link>
+            <Link 
+              to="/privacy"
               className="text-gray-400 hover:text-chess-accent mb-2 md:mb-0"
             >
               Privacy Policy
-            </a>
-            <a 
-              href="/contact"
+            </Link>
+            <Link 
+              to="/contact"
               className="text-gray-400 hover:text-chess-accent"
             >
               Contact
-            </a>
+            </Link>
           </div>
         </div>
         
