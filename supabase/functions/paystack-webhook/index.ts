@@ -13,9 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const PAYSTACK_WEBHOOK_SECRET = Deno.env.get('PAYSTACK_WEBHOOK')
-    if (!PAYSTACK_WEBHOOK_SECRET) {
-      throw new Error('PAYSTACK_WEBHOOK secret is not set')
+    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY')
+    if (!PAYSTACK_SECRET_KEY) {
+      throw new Error('PAYSTACK_SECRET_KEY secret is not set')
     }
 
     // Verify webhook signature
@@ -30,17 +30,27 @@ serve(async (req) => {
 
     const body = await req.text()
     
-    // Verify the signature
-    const hash = await crypto.subtle.digest(
-      'SHA-512',
-      new TextEncoder().encode(PAYSTACK_WEBHOOK_SECRET + body)
+    // Verify the signature using HMAC-SHA512
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(PAYSTACK_SECRET_KEY),
+      { name: 'HMAC', hash: 'SHA-512' },
+      false,
+      ['sign']
     )
-    const expectedSignature = Array.from(new Uint8Array(hash))
+    
+    const signatureBuffer = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      new TextEncoder().encode(body)
+    )
+    
+    const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('')
 
     if (signature !== expectedSignature) {
-      console.error('Invalid signature')
+      console.error('Invalid signature. Expected:', expectedSignature, 'Received:', signature)
       return new Response(JSON.stringify({ error: 'Invalid signature' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -48,7 +58,7 @@ serve(async (req) => {
     }
 
     const event = JSON.parse(body)
-    console.log('Webhook event:', event.event)
+    console.log('Webhook event received:', event.event, 'Event data:', JSON.stringify(event, null, 2))
 
     // Initialize Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!

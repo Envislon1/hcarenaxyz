@@ -323,6 +323,8 @@ const WalletPage = () => {
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Wallet</h1>
 
+      <HolocoinInfo />
+
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="border-chess-brown/50 bg-chess-dark/90">
           <CardHeader>
@@ -339,8 +341,6 @@ const WalletPage = () => {
                   Available for withdrawal: <span className="font-semibold text-foreground">HC̸ {wallet?.settledBalance?.toFixed(2) || '0.00'}</span>
                 </div>
               </div>
-
-              <HolocoinInfo />
 
               <div className="space-y-4">
                   <ToggleGroup

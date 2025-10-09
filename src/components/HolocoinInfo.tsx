@@ -20,18 +20,13 @@ export const HolocoinInfo = () => {
   if (!settings) return null;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="text-sm text-muted-foreground space-y-1">
+      <div className="flex items-center gap-2">
         <Info className="w-4 h-4" />
-        <span>
-          1 Holocoin = ₦{settings.naira_per_holocoin}
-        </span>
+        <span>1 Holocoin = ₦{settings.naira_per_holocoin}</span>
       </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Info className="w-4 h-4" />
-        <span>
-          Payment settlement takes T+1 (24 hours). Withdrawals are only available for settled funds.
-        </span>
+      <div>
+        Payment settlement takes T+1 (24 hours). Withdrawals are only available for settled funds.
       </div>
     </div>
   );
