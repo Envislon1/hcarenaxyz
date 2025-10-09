@@ -438,6 +438,7 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          completed_at: string | null
           created_at: string
           game_id: string | null
           id: string
@@ -448,6 +449,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          completed_at?: string | null
           created_at?: string
           game_id?: string | null
           id?: string
@@ -458,6 +460,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          completed_at?: string | null
           created_at?: string
           game_id?: string | null
           id?: string

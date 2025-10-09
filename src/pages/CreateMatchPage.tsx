@@ -43,6 +43,28 @@ const CreateMatchPage = () => {
   // Redirect to active game if one exists
   useActiveGameRedirect();
 
+  // Fetch latest user balance
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('wallet_balance')
+        .eq('id', user.id)
+        .single();
+      if (error) {
+        console.error("Error fetching user balance:", error);
+        return user;
+      }
+      return { ...user, balance: Number(data.wallet_balance) };
+    },
+    enabled: !!user?.id,
+    refetchInterval: 2000 // Refresh every 2 seconds
+  });
+
+  const displayUser = currentUser || user;
+
   // Check for active games
   const { data: activeGame } = useQuery({
     queryKey: ["activeGame", user?.id],
@@ -85,13 +107,13 @@ const CreateMatchPage = () => {
     ? stake * 12 * 1.074 // 12 pieces, 7.4% fee
     : stake;
 
-  if (!user) {
+  if (!displayUser) {
     navigate("/login");
     return null;
   }
 
   const handleCreateMatch = async () => {
-    if (!user) {
+    if (!displayUser) {
       toast({
         title: "Error",
         description: "You must be logged in to create a match",
@@ -104,7 +126,7 @@ const CreateMatchPage = () => {
     const { data: pendingGame } = await supabase
       .from('games')
       .select('*')
-      .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+      .or(`player1_id.eq.${displayUser.id},player2_id.eq.${displayUser.id}`)
       .eq('status', 'waiting')
       .limit(1)
       .maybeSingle();
@@ -129,10 +151,10 @@ const CreateMatchPage = () => {
       return;
     }
 
-    if (requiredBalance > user.balance) {
+    if (requiredBalance > displayUser.balance) {
       toast({
         title: "Insufficient balance",
-        description: `You need ${requiredBalance} holocoins (you have ${user.balance})`,
+        description: `You need ${requiredBalance} holocoins (you have ${displayUser.balance})`,
         variant: "destructive",
       });
       return;
@@ -148,7 +170,7 @@ const CreateMatchPage = () => {
           gameType,
           stake,
           timeLimit,
-          userId: user.id,
+          userId: displayUser.id,
           totalStakeAmount: requiredBalance // Pass calculated total amount
         }
       });
@@ -171,7 +193,7 @@ const CreateMatchPage = () => {
       } else {
         // No match found, deduct stake and create new game
         const { data: deductData, error: deductError } = await supabase.functions.invoke('deduct-stake', {
-          body: { playerId: user.id, stakeAmount: requiredBalance }
+          body: { playerId: displayUser.id, stakeAmount: requiredBalance }
         });
 
         if (deductError || deductData?.error) {
@@ -192,7 +214,7 @@ const CreateMatchPage = () => {
         const { data: newGame, error: createError } = await supabase
           .from('games')
           .insert({
-            player1_id: user.id,
+            player1_id: displayUser.id,
             stake_amount: stake,
             platform_fee: platformFee,
             time_limit: timeLimit,
@@ -296,7 +318,7 @@ const CreateMatchPage = () => {
           <div className="p-4 bg-chess-brown/20 rounded-lg space-y-2">
             <div className="flex justify-between text-sm">
               <span>Your balance:</span>
-              <span className="text-chess-accent font-bold">HC̸{user.balance.toFixed(1)}</span>
+              <span className="text-chess-accent font-bold">HC̸{displayUser.balance.toFixed(1)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Total stake required:</span>
@@ -328,7 +350,7 @@ const CreateMatchPage = () => {
           </Button>
           <Button 
             onClick={handleCreateMatch} 
-            disabled={isCreating || requiredBalance > user.balance || !!activeGame}
+            disabled={isCreating || requiredBalance > displayUser.balance || !!activeGame}
             className="bg-chess-accent hover:bg-chess-accent/80 text-black"
           >
             {activeGame ? "Finish Active Game First" : isCreating ? "Creating..." : "Create Match"}

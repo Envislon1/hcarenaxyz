@@ -41,10 +41,43 @@ const WalletPage = () => {
         throw profileError;
       }
 
+      // Calculate settled balance (T+1 settlement)
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      
+      const { data: transactions, error: txError } = await supabase
+        .from('transactions')
+        .select('amount, transaction_type, completed_at, status')
+        .eq('user_id', user.id)
+        .eq('transaction_type', 'deposit')
+        .eq('status', 'completed')
+        .not('completed_at', 'is', null)
+        .lte('completed_at', oneDayAgo.toISOString());
+      
+      if (txError) {
+        console.error('Error fetching transactions:', txError);
+      }
+
+      // Calculate settled deposits (older than 24 hours)
+      const settledDeposits = transactions?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      
+      // Get all withdrawals to subtract from settled balance
+      const { data: withdrawals } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', user.id)
+        .eq('transaction_type', 'withdrawal')
+        .in('status', ['completed', 'processing']);
+      
+      const totalWithdrawals = withdrawals?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      
+      const settledBalance = Math.max(0, settledDeposits - totalWithdrawals);
+
       return { 
         id: user.id,
         user_id: user.id,
-        balance: profileData?.wallet_balance || 0
+        balance: profileData?.wallet_balance || 0,
+        settledBalance: settledBalance
       };
     },
     enabled: !!user?.id,
@@ -215,6 +248,18 @@ const WalletPage = () => {
       }
 
       const coins = withdrawalAmount / nairaRate;
+      
+      // Check settled balance (T+1 settlement rule)
+      const settledBalance = wallet?.settledBalance || 0;
+      if (coins > settledBalance) {
+        toast({
+          title: 'Balance Not Yet Settled',
+          description: 'Some of your deposits are still pending settlement (T+1). Please wait 24 hours after deposit before withdrawing.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       if (wallet?.balance && coins > wallet.balance) {
         throw new Error('Insufficient coins for withdrawal');
       }
@@ -286,9 +331,16 @@ const WalletPage = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="text-2xl font-bold">
-                {isLoading ? <span className="inline-block animate-pulse">Loading...</span> : `HC̸ ${wallet?.balance?.toFixed(2) || '0.00'}`}
+              <div className="space-y-2">
+                <div className="text-2xl font-bold">
+                  {isLoading ? <span className="inline-block animate-pulse">Loading...</span> : `HC̸ ${wallet?.balance?.toFixed(2) || '0.00'}`}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Available for withdrawal: <span className="font-semibold text-foreground">HC̸ {wallet?.settledBalance?.toFixed(2) || '0.00'}</span>
+                </div>
               </div>
+
+              <HolocoinInfo />
 
               <div className="space-y-4">
                   <ToggleGroup
@@ -337,8 +389,6 @@ const WalletPage = () => {
             </div>
           </CardContent>
         </Card>
-
-        <HolocoinInfo />
       </div>
 
       <Dialog open={isWithdrawalOpen} onOpenChange={setIsWithdrawalOpen}>

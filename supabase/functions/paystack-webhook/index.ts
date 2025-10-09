@@ -90,10 +90,13 @@ serve(async (req) => {
       const conversionRate = settings?.setting_value?.naira_per_holocoin || 306
       const holocoins = amount / conversionRate
 
-      // Update transaction status
+      // Update transaction status and set completion timestamp
       const { error: updateTxError } = await supabase
         .from('transactions')
-        .update({ status: 'completed' })
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
         .eq('id', transaction.id)
 
       if (updateTxError) {
