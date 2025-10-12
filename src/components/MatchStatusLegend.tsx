@@ -63,7 +63,7 @@ export const MatchStatusLegend = () => {
 
   return (
     <Card className="p-4 bg-chess-dark/90 border-chess-brown/50">
-      <h3 className="text-sm font-semibold text-chess-accent mb-3">Available Matches Table</h3>
+      <h3 className="text-sm font-semibold text-chess-accent mb-3">Available Matches</h3>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -117,7 +117,7 @@ export const MatchStatusLegend = () => {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-gray-500" />
-            <span className="text-gray-300">No Match</span>
+            <span className="text-gray-300">Empty</span>
           </div>
         </div>
         <p className="text-xs text-center text-gray-400 mt-2">

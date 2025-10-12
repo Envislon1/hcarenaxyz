@@ -25,10 +25,9 @@ const stakeOptions = [
   { value: 10, label: "10 Holocoins per piece" },
 ];
 
-// Game types available
+// Only checkers is supported now
 const gameTypes = [
   { value: "checkers", label: "Checkers" },
-  { value: "chess", label: "Chess" },
 ];
 
 const CreateMatchPage = () => {
@@ -106,8 +105,6 @@ const CreateMatchPage = () => {
 
   const requiredBalance = gameType === "checkers" 
     ? stake * 12 * 1.074 // 12 pieces, 7.4% fee
-    : gameType === "chess"
-    ? stake * 16 * 1.074 // 16 pieces, 7.4% fee
     : stake;
 
   if (!displayUser) {
@@ -212,8 +209,7 @@ const CreateMatchPage = () => {
         }
 
         // Calculate holo fee (7.4% of total pot - both players' stakes)
-        const piecesPerPlayer = gameType === "chess" ? 16 : 12;
-        const platformFee = stake * piecesPerPlayer * 2 * 0.074;
+        const platformFee = stake * 24 * 0.074;
         
         const { data: newGame, error: createError } = await supabase
           .from('games')
@@ -223,7 +219,7 @@ const CreateMatchPage = () => {
             platform_fee: platformFee,
             time_limit: timeLimit,
             game_type: gameType,
-            board_state: getInitialBoard(gameType),
+            board_state: getInitialBoard(),
             player1_time_remaining: timeLimit,
             player2_time_remaining: timeLimit,
           })
@@ -280,21 +276,7 @@ const CreateMatchPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="game-type">Game Type</Label>
-            <Select value={gameType} onValueChange={setGameType}>
-              <SelectTrigger id="game-type">
-                <SelectValue placeholder="Select game" />
-              </SelectTrigger>
-              <SelectContent>
-                {gameTypes.map(type => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Game type removed - only checkers */}
 
           <div className="space-y-2">
             <Label htmlFor="stake">Stake Per Piece</Label>
@@ -310,9 +292,11 @@ const CreateMatchPage = () => {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Required balance: {requiredBalance.toFixed(1)} holocoins (includes 7.4% HC̸ fee)
-            </p>
+            {gameType === "checkers" && (
+              <p className="text-xs text-muted-foreground">
+                Required balance: {requiredBalance.toFixed(1)} holocoins (includes 7.4% HC̸ fee)
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -338,7 +322,7 @@ const CreateMatchPage = () => {
             </div>
             <div className="flex justify-between text-sm">
               <span>Total stake required:</span>
-              <span className="font-bold">HC̸{(stake * (gameType === "chess" ? 16 : 12)).toFixed(1)}</span>
+              <span className="font-bold">HC̸{(stake * 12).toFixed(1)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Stake per piece:</span>
@@ -346,7 +330,7 @@ const CreateMatchPage = () => {
             </div>
             <div className="flex justify-between text-sm">
               <span>Holo fee:</span>
-              <span className="font-bold">HC̸{(stake * (gameType === "chess" ? 16 : 12) * 0.074).toFixed(1)}</span>
+              <span className="font-bold">HC̸{(stake * 12 * 0.074).toFixed(1)}</span>
             </div>
             <div className="flex justify-between text-sm border-t border-chess-brown/30 pt-2 mt-2">
               <span className="font-semibold">Total deduction:</span>
@@ -385,16 +369,8 @@ const CreateMatchPage = () => {
   );
 };
 
-// Get initial board based on game type
-function getInitialBoard(gameType: string = "checkers"): any[] {
-  if (gameType === "chess") {
-    return getInitialChessBoard();
-  }
-  return getInitialCheckersBoard();
-}
-
 // Initial checkers board setup
-function getInitialCheckersBoard(): any[] {
+function getInitialBoard(): any[] {
   const board = Array(64).fill(null);
   
   // Set up checkers pieces
@@ -413,27 +389,6 @@ function getInitialCheckersBoard(): any[] {
     }
   }
   
-  return board;
-}
-
-// Initial chess board setup
-function getInitialChessBoard(): any[] {
-  const board: any[] = Array(64).fill(null);
-
-  // Player 2 pieces (top - black)
-  const backRow2 = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
-  for (let i = 0; i < 8; i++) {
-    board[i] = { player: 2, type: backRow2[i], hasMoved: false };
-    board[i + 8] = { player: 2, type: 'pawn', hasMoved: false };
-  }
-
-  // Player 1 pieces (bottom - white)
-  const backRow1 = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
-  for (let i = 0; i < 8; i++) {
-    board[48 + i] = { player: 1, type: 'pawn', hasMoved: false };
-    board[56 + i] = { player: 1, type: backRow1[i], hasMoved: false };
-  }
-
   return board;
 }
 

@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Match } from "@/types";
 import { CheckersBoard } from "@/components/CheckersBoard";
-import { ChessBoard } from "@/components/ChessBoard";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -138,11 +137,7 @@ export const MatchCard = ({ match, onViewDetails, onJoinMatch, showViewDetails =
         
         <CardContent className="pt-0">
           <div className="aspect-square w-full max-w-[200px] mx-auto my-2">
-            {match.gameMode === 'chess' ? (
-              <ChessBoard viewOnly={true} />
-            ) : (
-              <CheckersBoard />
-            )}
+            <CheckersBoard />
           </div>
           
           {match.status === 'completed' && match.winner && (

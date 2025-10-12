@@ -45,8 +45,15 @@ export const useActiveGameRedirect = () => {
   });
 
   useEffect(() => {
-    // Automatic navigation disabled - users can navigate manually
-    // Don't redirect to active games automatically
+    // Don't redirect if already on game page or login/register pages
+    const isOnGamePage = location.pathname.startsWith('/game/');
+    const isOnAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname);
+    
+    // Only redirect if game is truly active (status === 'active')
+    if (activeGame && activeGame.status === 'active' && !isOnGamePage && !isOnAuthPage) {
+      console.log('Active game detected, redirecting to game page');
+      navigate(`/game/${activeGame.id}`, { replace: true });
+    }
   }, [activeGame, location.pathname, navigate]);
 
   return { activeGame };

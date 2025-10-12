@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { gameService, indexToNotation } from "@/services/gameService";
@@ -6,7 +6,7 @@ import { userService } from "@/services/userService";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Clock, User } from "lucide-react";
+import { Clock, Trophy, User } from "lucide-react";
 import { 
   movePiece, 
   getLegalMovesForPlayer, 
@@ -14,8 +14,6 @@ import {
   GameState as CheckersGameState,
   PieceType
 } from "@/utils/checkersLogic";
-import { Chess } from 'chess.js';
-import { ChessBoard } from "@/components/ChessBoard";
 import { GameChat } from "@/components/GameChat";
 import { useGamePresence } from "@/hooks/useGamePresence";
 import { useNotifications } from "@/context/NotificationContext";
@@ -64,7 +62,6 @@ const GamePage = () => {
   const [takebackRequestFrom, setTakebackRequestFrom] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [lowTimeWarning, setLowTimeWarning] = useState(false);
-  const chessRef = useRef<Chess>(new Chess());
   
   const { playSound } = useNotifications();
 
@@ -110,31 +107,12 @@ const GamePage = () => {
         if (gameData.board_state && Array.isArray(gameData.board_state)) {
           const loadedBoard = gameData.board_state as any[];
           setBoardState(loadedBoard);
-          
-          if (gameData.game_type === 'chess') {
-            // Initialize chess.js with loaded board
-            const fen = boardToFen(loadedBoard);
-            try {
-              chessRef.current = new Chess(fen);
-            } catch (e) {
-              console.error('Invalid FEN from board state:', fen);
-              chessRef.current = new Chess();
-            }
-          } else {
-            updateLegalMoves(loadedBoard, gameData.current_turn);
-          }
+          updateLegalMoves(loadedBoard, gameData.current_turn);
         } else {
-          if (gameData.game_type === 'chess') {
-            // Initialize standard chess position
-            chessRef.current = new Chess();
-            const initialBoard = fenToBoard(chessRef.current.fen());
-            setBoardState(initialBoard);
-          } else {
-            // Initialize checkers board
-            const initialBoard = getInitialCheckersBoard();
-            setBoardState(initialBoard);
-            updateLegalMoves(initialBoard, 1);
-          }
+          // Initialize checkers board
+          const initialBoard = getInitialCheckersBoard();
+          setBoardState(initialBoard);
+          updateLegalMoves(initialBoard, 1);
         }
       }
     });
@@ -163,18 +141,7 @@ const GamePage = () => {
         if (payload.new.board_state && Array.isArray(payload.new.board_state)) {
           const updatedBoard = payload.new.board_state as any[];
           setBoardState(updatedBoard);
-          
-          if (payload.new.game_type === 'chess') {
-            // Update chess.js instance with new board state
-            const fen = boardToFen(updatedBoard);
-            try {
-              chessRef.current = new Chess(fen);
-            } catch (e) {
-              console.error('Invalid FEN from update:', fen);
-            }
-          } else {
-            updateLegalMoves(updatedBoard, payload.new.current_turn);
-          }
+          updateLegalMoves(updatedBoard, payload.new.current_turn);
         }
       }
     });
@@ -243,19 +210,7 @@ const GamePage = () => {
             setBoardState(syncedBoard);
             setMoveCount(latestGame.current_turn - 1);
             setGame(latestGame);
-            
-            if (latestGame.game_type === 'chess') {
-              // Update chess.js instance after takeback
-              const fen = boardToFen(syncedBoard);
-              try {
-                chessRef.current = new Chess(fen);
-              } catch (e) {
-                console.error('Invalid FEN after takeback:', fen);
-              }
-            } else {
-              updateLegalMoves(syncedBoard, latestGame.current_turn);
-            }
-            
+            updateLegalMoves(syncedBoard, latestGame.current_turn);
             setSelectedSquare(null);
             setHighlightedMoves([]);
           }
@@ -272,48 +227,41 @@ const GamePage = () => {
       }
     });
 
-    // Periodic sync to ensure board state is always up-to-date (only for chess games)
-    let syncInterval: NodeJS.Timeout | null = null;
-    
-    if (game?.game_type === 'chess') {
-      syncInterval = setInterval(async () => {
-        const latestGame = await gameService.getGame(gameId);
-        if (latestGame && latestGame.board_state) {
-          // Only update if move count changed (not just any board state change)
-          if (latestGame.current_turn !== moveCount + 1) {
-            console.log('Syncing board state from database');
-            const syncedBoard = latestGame.board_state as any[];
-            setBoardState(syncedBoard);
-            setMoveCount(latestGame.current_turn - 1);
-            setGame(latestGame);
-            
-            // Update chess.js instance with synced board state
-            const fen = boardToFen(syncedBoard, latestGame.current_turn - 1);
-            try {
-              chessRef.current = new Chess(fen);
-            } catch (e) {
-              console.error('Invalid FEN from sync:', fen);
-            }
-            
-            // Only sync time if it's significantly different (more than 2 seconds)
-            const timeDiff1 = Math.abs(latestGame.player1_time_remaining - player1Time);
-            const timeDiff2 = Math.abs(latestGame.player2_time_remaining - player2Time);
-            
-            if (timeDiff1 > 2 || timeDiff2 > 2) {
-              setPlayer1Time(latestGame.player1_time_remaining);
-              setPlayer2Time(latestGame.player2_time_remaining);
-            }
+    // Periodic sync to ensure board state is always up-to-date
+    const syncInterval = setInterval(async () => {
+      const latestGame = await gameService.getGame(gameId);
+      if (latestGame && latestGame.board_state) {
+        // Only update if board state actually changed
+        const currentBoardStr = JSON.stringify(boardState);
+        const latestBoardStr = JSON.stringify(latestGame.board_state);
+        
+        if (currentBoardStr !== latestBoardStr) {
+          console.log('Syncing board state from database');
+          const syncedBoard = latestGame.board_state as any[];
+          setBoardState(syncedBoard);
+          setMoveCount(latestGame.current_turn - 1);
+          setGame(latestGame);
+          updateLegalMoves(syncedBoard, latestGame.current_turn);
+          
+          // Only sync time if it's significantly different (more than 2 seconds)
+          // to avoid overriding the client countdown
+          const timeDiff1 = Math.abs(latestGame.player1_time_remaining - player1Time);
+          const timeDiff2 = Math.abs(latestGame.player2_time_remaining - player2Time);
+          
+          if (timeDiff1 > 2 || timeDiff2 > 2) {
+            setPlayer1Time(latestGame.player1_time_remaining);
+            setPlayer2Time(latestGame.player2_time_remaining);
           }
         }
-      }, 3000); // Sync every 3 seconds for chess
-    }
+      }
+    }, 2000); // Sync every 2 seconds
 
     return () => {
       gameChannel.unsubscribe();
       rematchChannel?.unsubscribe();
       drawChannel?.unsubscribe();
       takebackChannel?.unsubscribe();
-      if (syncInterval) clearInterval(syncInterval);
+      clearInterval(syncInterval);
     };
   }, [gameId, user, player1Username, player2Username]);
 
@@ -547,182 +495,6 @@ const GamePage = () => {
         console.error('Move error:', error);
       }
     }
-  };
-
-  const handleChessMove = async (orig: string, dest: string) => {
-    if (!game || !user) return;
-    if (game.status !== 'active') return;
-    
-    // Check if it's the user's turn
-    if (!isMyTurn) {
-      console.log('Not your turn');
-      return;
-    }
-    
-    try {
-      console.log('Attempting chess move:', orig, 'to', dest);
-      console.log('Current FEN:', chessRef.current.fen());
-      
-      // Validate move with chess.js
-      const move = chessRef.current.move({ from: orig, to: dest, promotion: 'q' });
-      
-      if (!move) {
-        console.error('Invalid chess move from chess.js');
-        return;
-      }
-
-      console.log('Move validated:', move);
-
-      const capturedCount = move.captured ? 1 : 0;
-      const newFen = chessRef.current.fen();
-
-      // Convert FEN to board state array for storage
-      const newBoard = fenToBoard(newFen);
-
-      // Check for game over conditions
-      let winnerId = null;
-      if (chessRef.current.isGameOver()) {
-        if (chessRef.current.isCheckmate()) {
-          // Winner is the player who just moved (current user)
-          winnerId = user.id;
-        } else if (chessRef.current.isDraw() || chessRef.current.isStalemate()) {
-          // It's a draw - handle via draw offer system
-          await gameService.offerDraw(game.id, user.id);
-          toast({
-            title: "Draw by Stalemate",
-            description: "The game ended in a draw.",
-          });
-          return;
-        }
-      }
-
-      // Submit move to database
-      await gameService.makeMove(
-        game.id,
-        user.id,
-        {
-          from: orig,
-          to: dest,
-          piece: move.piece,
-          captured: capturedCount > 0
-        },
-        moveCount + 1,
-        newBoard,
-        boardState,
-        capturedCount
-      );
-
-      console.log('Chess move submitted to database');
-
-      // Complete game if there's a winner
-      if (winnerId) {
-        await gameService.completeGame(game.id, winnerId);
-      }
-
-      playSound('/sounds/move.ogg');
-    } catch (error) {
-      console.error('Chess move error:', error);
-      // Reset chess position on error
-      const currentFen = boardToFen(boardState);
-      try {
-        chessRef.current = new Chess(currentFen);
-      } catch (e) {
-        console.error('Failed to reset chess position:', e);
-        chessRef.current = new Chess();
-      }
-    }
-  };
-
-  // Convert chess notation to index (e.g., 'e2' -> 52)
-  const notationToIndex = (notation: string): number | null => {
-    if (notation.length !== 2) return null;
-    const file = notation.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, etc.
-    const rank = 8 - parseInt(notation[1]); // '8' = 0, '7' = 1, etc.
-    if (file < 0 || file > 7 || rank < 0 || rank > 7) return null;
-    return rank * 8 + file;
-  };
-
-  // Convert index to chess notation (e.g., 52 -> 'e2')
-  const indexToChessNotation = (index: number): string => {
-    const file = String.fromCharCode(97 + (index % 8));
-    const rank = (8 - Math.floor(index / 8)).toString();
-    return file + rank;
-  };
-
-  // Convert board state to FEN notation
-  const boardToFen = (board: any[], currentMoveCount?: number): string => {
-    if (!board || board.length === 0) {
-      return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-    }
-    
-    const moveCnt = currentMoveCount !== undefined ? currentMoveCount : moveCount;
-    
-    // For chess, try to reconstruct FEN from board state
-    let fen = '';
-    for (let rank = 0; rank < 8; rank++) {
-      let emptyCount = 0;
-      for (let file = 0; file < 8; file++) {
-        const piece = board[rank * 8 + file];
-        if (!piece || !piece.type) {
-          emptyCount++;
-        } else {
-          if (emptyCount > 0) {
-            fen += emptyCount;
-            emptyCount = 0;
-          }
-          const pieceChar = getPieceChar(piece);
-          fen += pieceChar;
-        }
-      }
-      if (emptyCount > 0) fen += emptyCount;
-      if (rank < 7) fen += '/';
-    }
-    
-    // Add turn info based on move count
-    const turn = moveCnt % 2 === 0 ? 'w' : 'b';
-    return fen + ` ${turn} KQkq - 0 1`;
-  };
-
-  // Convert FEN to board state array
-  const fenToBoard = (fen: string): any[] => {
-    const board = new Array(64).fill(null);
-    const fenParts = fen.split(' ');
-    const position = fenParts[0];
-    const ranks = position.split('/');
-    
-    let index = 0;
-    for (const rank of ranks) {
-      for (const char of rank) {
-        if (char >= '1' && char <= '8') {
-          index += parseInt(char);
-        } else {
-          const isWhite = char === char.toUpperCase();
-          const pieceType = {
-            'p': 'pawn', 'r': 'rook', 'n': 'knight',
-            'b': 'bishop', 'q': 'queen', 'k': 'king'
-          }[char.toLowerCase()] || 'pawn';
-          
-          board[index] = {
-            type: pieceType,
-            player: isWhite ? 1 : 2,
-            color: isWhite ? 'white' : 'black'
-          };
-          index++;
-        }
-      }
-    }
-    
-    return board;
-  };
-
-  // Get piece character for FEN
-  const getPieceChar = (piece: any): string => {
-    const chars: Record<string, string> = {
-      'pawn': 'p', 'rook': 'r', 'knight': 'n',
-      'bishop': 'b', 'queen': 'q', 'king': 'k'
-    };
-    const char = chars[piece.type] || 'p';
-    return piece.player === 1 ? char.toUpperCase() : char;
   };
 
   const handleRematchOffer = async () => {
@@ -992,11 +764,19 @@ const GamePage = () => {
             )}
           </Card>
 
+          <Card className="p-4 bg-chess-dark/90 border-chess-brown">
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="w-5 h-5 text-chess-accent" />
+              <span className="text-sm text-gray-400">Total Stake</span>
+            </div>
+            <div className="text-white font-semibold">{(game.stake_amount * 12).toFixed(1)} HC</div>
+            <div className="text-xs text-gray-400 mt-2">
+              Stake Per Piece: {game.stake_amount.toFixed(1)} HC
+            </div>
+          </Card>
+
           {game.status === 'active' && (
             <CapturedPieces
-              gameId={game.id}
-              gameType={game.game_type}
-              boardState={boardState}
               player1Captures={game.player1_captures || 0}
               player2Captures={game.player2_captures || 0}
               player1Username={player1Username}
@@ -1009,30 +789,8 @@ const GamePage = () => {
         {/* Game Board - Desktop */}
         <div className="lg:col-span-3">
           <div className="w-full max-w-3xl mx-auto">
-            {game.game_type === "chess" ? (
-              // Chess board using Chessground
-              <>
-                {console.log('Desktop ChessBoard props:', {
-                  moveCount,
-                  isPlayer1,
-                  isPlayer2,
-                  isMyTurn,
-                  fen: boardToFen(boardState),
-                  viewOnly: game.status !== 'active' || !isMyTurn,
-                  gameStatus: game.status,
-                  orientation: isPlayer2 ? 'black' : 'white'
-                })}
-                <ChessBoard
-                  fen={boardToFen(boardState)}
-                  orientation={isPlayer2 ? 'black' : 'white'}
-                  viewOnly={game.status !== 'active' || !isMyTurn}
-                  onMove={handleChessMove}
-                  config={{ movable: { color: 'both' } }}
-                />
-              </>
-            ) : (
-              <div className="aspect-square w-full grid grid-cols-8 grid-rows-8 border-4 border-chess-brown rounded-lg overflow-hidden shadow-2xl">
-                {boardIndices.map((index) => {
+            <div className="aspect-square w-full grid grid-cols-8 grid-rows-8 border-4 border-chess-brown rounded-lg overflow-hidden shadow-2xl">
+              {boardIndices.map((index) => {
                 const piece = boardState[index];
                 const row = Math.floor(index / 8);
                 const col = index % 8;
@@ -1047,7 +805,7 @@ const GamePage = () => {
                     ? { outer: 'rgb(255, 255, 255)', inner: 'rgb(66, 66, 66)' }
                     : { outer: 'rgb(0, 0, 0)', inner: 'rgb(30, 30, 30)' };
                   
-                  const pieceWorth = `${Math.round(game?.stake_amount || 0)}hc`;
+                  const pieceWorth = `${Math.round(game.stake_amount)}hc`;
                   
                   return (
                     <div 
@@ -1097,10 +855,8 @@ const GamePage = () => {
                     </div>
                   </div>
                 );
-              })
-              }
-              </div>
-            )}
+              })}
+            </div>
 
             {/* Move indicator and Action Buttons */}
             <div className="mt-4 text-center space-y-2">
@@ -1119,7 +875,7 @@ const GamePage = () => {
                     </div>
                   )}
                   <div className="flex gap-2 justify-center">
-                    {game.status === 'waiting' || (game.player2_id && moveCount < 2) ? (
+                    {game.status === 'waiting' || moveCount < 2 ? (
                       <Button 
                         onClick={() => setShowCancelConfirm(true)} 
                         variant="outline"
@@ -1128,7 +884,7 @@ const GamePage = () => {
                       >
                         Cancel
                       </Button>
-                    ) : game.player2_id ? (
+                    ) : (
                       <>
                         <Button 
                           onClick={() => setShowResignConfirm(true)} 
@@ -1154,7 +910,7 @@ const GamePage = () => {
                           Take Back
                         </Button>
                       </>
-                    ) : null}
+                    )}
                   </div>
                 </>
               )}
@@ -1287,7 +1043,7 @@ const GamePage = () => {
                   ? 'text-[#e2c044] animate-pulse font-bold' 
                   : 'text-white'
               }`}
-              style={(isPlayer1 ? player1Time : player2Time) < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
+              style={(isPlayer1 ? player2Time : player1Time) < 60 ? { textShadow: '0 0 10px #e2c044' } : {}}
             >
               {isPlayer1 
                 ? `${Math.floor(player2Time / 60)}:${(player2Time % 60).toString().padStart(2, '0')}`
@@ -1299,96 +1055,74 @@ const GamePage = () => {
 
         {/* Game Board - Full Width */}
         <div className="flex-1 flex items-center justify-center w-full px-2">
-          {game.game_type === 'chess' ? (
-            <>
-              {console.log('Mobile ChessBoard props:', {
-                moveCount,
-                isPlayer1,
-                isPlayer2,
-                isMyTurn,
-                fen: boardToFen(boardState),
-                viewOnly: game.status !== 'active' || !isMyTurn,
-                gameStatus: game.status,
-                orientation: isPlayer1 ? 'white' : 'black'
-              })}
-               <ChessBoard
-                 fen={boardToFen(boardState)}
-                 orientation={isPlayer1 ? 'white' : 'black'}
-                 viewOnly={game.status !== 'active' || !isMyTurn}
-                 onMove={handleChessMove}
-                 config={{ movable: { color: 'both' } }}
-               />
-            </>
-          ) : (
-            <div className="w-full aspect-square grid grid-cols-8 grid-rows-8 border-4 border-chess-brown rounded-lg overflow-hidden shadow-2xl">
-              {boardIndices.map((index) => {
-                const piece = boardState[index];
-                const row = Math.floor(index / 8);
-                const col = index % 8;
-                const isLight = (row + col) % 2 === 0;
-                const isSelected = selectedSquare === index;
-                const notation = indexToNotation(index);
+          <div className="w-full aspect-square grid grid-cols-8 grid-rows-8 border-4 border-chess-brown rounded-lg overflow-hidden shadow-2xl">
+            {boardIndices.map((index) => {
+              const piece = boardState[index];
+              const row = Math.floor(index / 8);
+              const col = index % 8;
+              const isLight = (row + col) % 2 === 0;
+              const isSelected = selectedSquare === index;
+              const notation = indexToNotation(index);
 
-                const renderPiece = () => {
-                  if (!piece || !piece.player) return null;
-                  
-                  const colors = piece.player === 1 
-                    ? { outer: 'rgb(255, 255, 255)', inner: 'rgb(66, 66, 66)' }
-                    : { outer: 'rgb(0, 0, 0)', inner: 'rgb(30, 30, 30)' };
-                  
-                  const pieceWorth = `${Math.round(game?.stake_amount || 0)}hc`;
-                  
-                  return (
-                    <div 
-                      className="w-[80%] h-[80%] rounded-full flex items-center justify-center relative"
-                      style={{
-                        backgroundColor: colors.outer,
-                        boxShadow: '3px 3px 6px rgba(0,0,0,0.4)'
-                      }}
-                    >
-                      <div 
-                        className="w-[85%] h-[85%] rounded-full flex flex-col items-center justify-center"
-                        style={{ backgroundColor: colors.inner }}
-                      >
-                        {piece.king && <span className="text-sm">👑</span>}
-                        <span className="text-[9px] font-bold text-yellow-400">{pieceWorth}</span>
-                      </div>
-                    </div>
-                  );
-                };
-
-                const isHighlighted = highlightedMoves.includes(index);
-                const isPlayer1 = user?.id === game?.player1_id;
-                const currentPlayerNumber = isPlayer1 ? 1 : 2;
-                const isMyTurn = (isPlayer1 && moveCount % 2 === 0) || (!isPlayer1 && moveCount % 2 === 1);
-                const canMoveFromHere = legalMoves.has(index) && boardState[index]?.player === currentPlayerNumber && isMyTurn;
-
+              const renderPiece = () => {
+                if (!piece || !piece.player) return null;
+                
+                const colors = piece.player === 1 
+                  ? { outer: 'rgb(255, 255, 255)', inner: 'rgb(66, 66, 66)' }
+                  : { outer: 'rgb(0, 0, 0)', inner: 'rgb(30, 30, 30)' };
+                
+                const pieceWorth = `${Math.round(game.stake_amount)}hc`;
+                
                 return (
-                  <div
-                    key={index}
-                    onClick={() => handleSquareClick(index)}
-                    className={`
-                      relative flex items-center justify-center cursor-pointer transition-all
-                      ${isLight ? 'bg-chess-light' : 'bg-chess-brown'}
-                      ${canMoveFromHere && !isSelected ? 'shadow-[0_0_12px_rgba(255,237,74,0.8)] animate-pulse' : ''}
-                      active:opacity-80
-                    `}
+                  <div 
+                    className="w-[80%] h-[80%] rounded-full flex items-center justify-center relative"
                     style={{
-                      ...(isHighlighted && {
-                        backgroundColor: 'rgba(255, 237, 74, 0.4)',
-                        boxShadow: '0 0 25px rgba(255, 237, 74, 0.7) inset'
-                      })
+                      backgroundColor: colors.outer,
+                      boxShadow: '3px 3px 6px rgba(0,0,0,0.4)'
                     }}
                   >
-                    {renderPiece()}
-                    <div className="absolute bottom-0 right-0.5 text-[8px] opacity-50 font-mono">
-                      {notation}
+                    <div 
+                      className="w-[85%] h-[85%] rounded-full flex flex-col items-center justify-center"
+                      style={{ backgroundColor: colors.inner }}
+                    >
+                      {piece.king && <span className="text-sm">👑</span>}
+                      <span className="text-[9px] font-bold text-yellow-400">{pieceWorth}</span>
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          )}
+              };
+
+              const isHighlighted = highlightedMoves.includes(index);
+              const isPlayer1 = user?.id === game?.player1_id;
+              const currentPlayerNumber = isPlayer1 ? 1 : 2;
+              const isMyTurn = (isPlayer1 && moveCount % 2 === 0) || (!isPlayer1 && moveCount % 2 === 1);
+              const canMoveFromHere = legalMoves.has(index) && boardState[index]?.player === currentPlayerNumber && isMyTurn;
+
+              return (
+                <div
+                  key={index}
+                  onClick={() => handleSquareClick(index)}
+                  className={`
+                    relative flex items-center justify-center cursor-pointer transition-all
+                    ${isLight ? 'bg-chess-light' : 'bg-chess-brown'}
+                    ${canMoveFromHere && !isSelected ? 'shadow-[0_0_12px_rgba(255,237,74,0.8)] animate-pulse' : ''}
+                    active:opacity-80
+                  `}
+                  style={{
+                    ...(isHighlighted && {
+                      backgroundColor: 'rgba(255, 237, 74, 0.4)',
+                      boxShadow: '0 0 25px rgba(255, 237, 74, 0.7) inset'
+                    })
+                  }}
+                >
+                  {renderPiece()}
+                  <div className="absolute bottom-0 right-0.5 text-[8px] opacity-50 font-mono">
+                    {notation}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Bottom Player Info - You */}
@@ -1415,12 +1149,24 @@ const GamePage = () => {
           </div>
         </div>
 
+        {/* Stake Info for Mobile */}
+        <div className="px-4 py-3 flex justify-around items-center text-sm">
+          <div className="text-center">
+            <div className="text-gray-400 mb-1">Total Stake</div>
+            <div className="text-white font-semibold">{(game.stake_amount * 12).toFixed(1)} HC</div>
+          </div>
+          <div className="h-8 w-px bg-gray-700"></div>
+          <div className="text-center">
+            <div className="text-gray-400 mb-1">Per Piece</div>
+            <div className="text-white font-semibold">{game.stake_amount.toFixed(1)} HC</div>
+          </div>
+        </div>
 
         {/* Action Buttons for Mobile */}
         {game.status === 'active' && (
           <div className="px-4 pb-4 pt-2">
             <div className="flex gap-2 justify-center">
-              {game.player2_id && moveCount < 2 ? (
+              {moveCount < 2 ? (
                 <Button 
                   onClick={() => setShowCancelConfirm(true)} 
                   variant="outline"
@@ -1428,7 +1174,7 @@ const GamePage = () => {
                 >
                   Cancel
                 </Button>
-              ) : game.player2_id ? (
+              ) : (
                 <>
                   <Button 
                     onClick={() => setShowResignConfirm(true)} 
@@ -1452,7 +1198,7 @@ const GamePage = () => {
                     Take Back
                   </Button>
                 </>
-              ) : null}
+              )}
             </div>
           </div>
         )}

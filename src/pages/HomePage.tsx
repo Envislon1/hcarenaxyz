@@ -183,7 +183,7 @@ export const HomePage = () => {
               <CardContent>
                 <p className="text-gray-400">
                   Each captured piece = stake × holocoins. 
-                  With 12 pieces per player, maximum stake of 63 holocoins required (includes 7.4% HC̸ fee & Paystack).
+                  With 12 pieces per player, maximum stake of 63 holocoins required (includes 7.4% HC̸ fee).
                 </p>
               </CardContent>
             </Card>
