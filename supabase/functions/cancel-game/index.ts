@@ -43,27 +43,30 @@ Deno.serve(async (req) => {
       throw new Error('Game cannot be cancelled');
     }
 
-    // Check if any moves have been made
+    // Check if more than 2 moves have been made (after both players moved once)
     const { data: moves, error: movesError } = await supabase
       .from('game_moves')
       .select('id')
-      .eq('game_id', gameId)
-      .limit(1);
+      .eq('game_id', gameId);
 
     if (movesError) {
       console.error('Error checking moves:', movesError);
     }
 
-    // If moves have been made, reject cancellation
-    if (moves && moves.length > 0) {
+    // Allow cancellation within first 2 moves only
+    if (moves && moves.length > 2) {
       return new Response(
-        JSON.stringify({ error: 'Cannot cancel game after moves have been made' }),
+        JSON.stringify({ error: 'Cannot cancel game after both players have moved' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Calculate refund amount (stake + holo fee)
-    const refundAmount = Number(game.stake_amount) + Number(game.platform_fee);
+    // Calculate refund amount based on game type
+    const piecesPerPlayer = game.game_type === 'chess' ? 16 : 12;
+    const totalStake = Number(game.stake_amount) * piecesPerPlayer;
+    const platformFee = Number(game.platform_fee) || 0;
+    const playerFee = platformFee / 2; // Split platform fee between both players
+    const refundAmount = totalStake + playerFee;
 
     // Refund player 1
     const { data: player1Profile, error: p1Error } = await supabase

@@ -1,82 +1,206 @@
+import { useEffect, useRef } from 'react';
+import { Chessground } from 'chessground';
+import { Api } from 'chessground/api';
+import { Config } from 'chessground/config';
+import { Chess } from 'chess.js';
+import 'chessground/assets/chessground.base.css';
+import 'chessground/assets/chessground.brown.css';
+import 'chessground/assets/chessground.cburnett.css';
 
 interface ChessBoardProps {
-  simplified?: boolean;
+  fen?: string;
+  orientation?: 'white' | 'black';
+  viewOnly?: boolean;
+  onMove?: (orig: string, dest: string) => void;
+  config?: Partial<Config>;
 }
 
-export const ChessBoard = ({ simplified = false }: ChessBoardProps) => {
-  // For a simplified board, we'll just show a static board
-  if (simplified) {
-    return (
-      <div className="w-full aspect-square grid grid-cols-8 grid-rows-8 border border-chess-brown">
-        {[...Array(64)].map((_, index) => {
-          const row = Math.floor(index / 8);
-          const col = index % 8;
-          const isLight = (row + col) % 2 === 0;
-          
-          return (
-            <div 
-              key={index} 
-              className={`${isLight ? 'bg-chess-light' : 'bg-chess-brown'} flex items-center justify-center`}
-            >
-              {getPiece(row, col)}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-  
-  // For a full board, we would implement the actual game logic
-  // This would be connected to the Lichess API in the real implementation
-  return (
-    <div className="w-full aspect-square grid grid-cols-8 grid-rows-8 border border-chess-brown">
-      {[...Array(64)].map((_, index) => {
-        const row = Math.floor(index / 8);
-        const col = index % 8;
-        const isLight = (row + col) % 2 === 0;
+export const ChessBoard = ({ 
+  fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  orientation = 'white',
+  viewOnly = false,
+  onMove,
+  config = {}
+}: ChessBoardProps) => {
+  const boardRef = useRef<HTMLDivElement>(null);
+  const chessgroundRef = useRef<Api | null>(null);
+  const chessRef = useRef<Chess>(new Chess());
+  // One-time rebuild flags for opponent's first move
+  const firstBlackTurnRebuiltRef = useRef(false);
+  const lastTurnRef = useRef<'white' | 'black'>('white');
+
+  useEffect(() => {
+    if (!boardRef.current) return;
+
+    // Initialize chess.js with current FEN
+    try {
+      chessRef.current = new Chess(fen);
+    } catch (e) {
+      console.error('Invalid FEN:', fen);
+      chessRef.current = new Chess();
+    }
+
+    // Get valid moves for initial setup
+    const initialDests = !viewOnly ? getValidMoves() : new Map();
+    const turnColor = chessRef.current.turn() === 'w' ? 'white' : 'black';
+    lastTurnRef.current = turnColor;
+
+    console.log('ChessBoard initial setup:', {
+      fen,
+      turn: turnColor,
+      viewOnly,
+      validMovesCount: initialDests.size,
+      sampleMoves: Array.from(initialDests.entries()).slice(0, 3)
+    });
+
+    const baseConfig: Config = {
+      fen,
+      orientation,
+      viewOnly,
+      movable: {
+        free: false,
+        color: viewOnly ? undefined : (((config as any)?.movable as any)?.color ?? turnColor),
+        showDests: true,
+        dests: initialDests,
+        events: {
+          after: (orig, dest) => {
+            // Delegate to parent; parent validates with chess.js and updates FEN
+            onMove?.(orig, dest);
+          }
+        }
+      },
+      draggable: {
+        enabled: !viewOnly,
+        showGhost: true
+      }
+    } as Config;
+
+    // Deep-merge incoming config for movable/draggable so we don't lose events/dests
+    const mergedMovable = { ...(baseConfig.movable as any), ...((config as any)?.movable || {}) };
+    const mergedDraggable = { ...(baseConfig.draggable as any), ...((config as any)?.draggable || {}) };
+
+    const chessgroundConfig: Config = {
+      ...baseConfig,
+      ...config,
+      movable: mergedMovable,
+      draggable: mergedDraggable,
+    } as Config;
+
+    chessgroundRef.current = Chessground(boardRef.current, chessgroundConfig);
+
+    return () => {
+      chessgroundRef.current?.destroy();
+    };
+  }, []);
+
+  // Get valid moves for all pieces
+  const getValidMoves = () => {
+    const dests = new Map();
+    const moves = chessRef.current.moves({ verbose: true });
+    
+    moves.forEach(move => {
+      if (!dests.has(move.from)) {
+        dests.set(move.from, []);
+      }
+      dests.get(move.from).push(move.to);
+    });
+    
+    return dests;
+  };
+
+  // Update board when props change
+  useEffect(() => {
+    if (chessgroundRef.current) {
+      try {
+        // Update chess.js instance with new FEN
+        chessRef.current = new Chess(fen);
         
-        return (
-          <div 
-            key={index} 
-            className={`${isLight ? 'bg-chess-light' : 'bg-chess-brown'} flex items-center justify-center relative`}
-          >
-            {getPiece(row, col)}
-            {/* Column labels (a-h) at bottom row */}
-            {row === 7 && (
-              <div className="absolute bottom-0 right-0 text-xs p-0.5 opacity-70">
-                {String.fromCharCode(97 + col)}
-              </div>
-            )}
-            {/* Row numbers (1-8) at leftmost column */}
-            {col === 0 && (
-              <div className="absolute top-0 left-0 text-xs p-0.5 opacity-70">
-                {8 - row}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+        // Get whose turn it is from chess.js
+        const turnColor = chessRef.current.turn() === 'w' ? 'white' : 'black';
+        
+        // Calculate legal moves
+        const newDests = !viewOnly ? getValidMoves() : new Map();
+        
+        // Force a one-time rebuild on opponent's first move to ensure dragging enables
+        if (
+          orientation === 'black' &&
+          lastTurnRef.current !== 'black' &&
+          turnColor === 'black' &&
+          !firstBlackTurnRebuiltRef.current
+        ) {
+          firstBlackTurnRebuiltRef.current = true;
+
+          const initialDests = newDests;
+          const baseConfig: Config = {
+            fen,
+            orientation,
+            viewOnly,
+            movable: {
+              free: false,
+              color: viewOnly ? undefined : ((config as any)?.movable?.color ?? turnColor),
+              showDests: true,
+              dests: initialDests,
+              events: {
+                after: (orig, dest) => {
+                  onMove?.(orig, dest);
+                }
+              }
+            },
+            draggable: {
+              enabled: !viewOnly,
+              showGhost: true
+            }
+          } as Config;
+
+          const mergedMovable = { ...(baseConfig.movable as any), ...((config as any)?.movable || {}) };
+          const mergedDraggable = { ...(baseConfig.draggable as any), ...((config as any)?.draggable || {}) };
+
+          const chessgroundConfig: Config = {
+            ...baseConfig,
+            ...config,
+            movable: mergedMovable,
+            draggable: mergedDraggable,
+          } as Config;
+
+          chessgroundRef.current.destroy();
+          chessgroundRef.current = Chessground(boardRef.current!, chessgroundConfig);
+          lastTurnRef.current = turnColor;
+          return;
+        }
+
+        console.log('Updating chess board:', {
+          fen,
+          turn: turnColor,
+          viewOnly,
+          movesCount: newDests.size,
+          moves: Array.from(newDests.entries())
+        });
+        
+        chessgroundRef.current.set({
+          fen,
+          orientation,
+          viewOnly,
+          movable: {
+            free: false,
+            color: viewOnly ? undefined : ((config as any)?.movable?.color ?? turnColor),
+            dests: newDests,
+            showDests: true
+          }
+        });
+        
+        // Track latest turn color
+        lastTurnRef.current = turnColor;
+      } catch (e) {
+        console.error('Invalid FEN:', fen, e);
+      }
+    }
+  }, [fen, orientation, viewOnly]);
+
+  return (
+    <div 
+      ref={boardRef} 
+      className="w-full aspect-square"
+      style={{ maxWidth: '100%' }}
+    />
   );
 };
-
-// Function to determine what piece should be displayed at a given position
-function getPiece(row: number, col: number): JSX.Element | null {
-  // Initial chess setup
-  const pieces = [
-    ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'], // White back row
-    ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'], // White pawns
-    [null, null, null, null, null, null, null, null], // Empty row
-    [null, null, null, null, null, null, null, null], // Empty row
-    [null, null, null, null, null, null, null, null], // Empty row
-    [null, null, null, null, null, null, null, null], // Empty row
-    ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'], // Black pawns
-    ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜']  // Black back row
-  ];
-  
-  const piece = pieces[row]?.[col];
-  
-  if (!piece) return null;
-  
-  return <span className="chess-piece text-2xl">{piece}</span>;
-}
